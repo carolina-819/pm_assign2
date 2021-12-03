@@ -4,7 +4,7 @@
 
 <!-- Bags name -->
 <arg name="path_bag" default="/home/percmap/catkin_ws/Bag/" />
-<arg name="file_bag" default="coastalloop_track" />
+<arg name="file_bag" default="track_yolo" />
 
 <node ns="/stereo/left" name="image_proc_left" type="image_proc" pkg="image_proc"/>
 <node ns="/stereo/right" name="image_proc_right" type="image_proc" pkg="image_proc"/>
