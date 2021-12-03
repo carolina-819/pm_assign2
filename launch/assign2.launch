@@ -20,6 +20,8 @@
 <!-- New  -->
 <include file="$(find pm_assign2)/launch/tf_state_publisher.launch">
 </include>
+
+<node name="object_3d_estimation"  type="object_3d_estimation" pkg="pm_assign2" />
 <!---->
 
 <!-- Launch detector -->
