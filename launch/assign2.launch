@@ -17,6 +17,11 @@
 <node name="republish_left"  type="republish" pkg="image_transport" args="compressed in:=/stereo/left/image_raw raw out:=/stereo/left/image_raw" />
 <node name="republish_right" type="republish" pkg="image_transport" args="compressed in:=/stereo/right/image_raw raw out:=/stereo/right/image_raw" />
 
+<!-- New  -->
+<include file="$(find pm_assign2)/launch/tf_state_publisher.launch">
+</include>
+<!---->
+
 <!-- Launch detector -->
 <include if="$(arg run_detector)" ns="dark2" file="$(find darknet_ros)/launch/darknet_ros.launch" >
 <arg name="ros_param_file" value="$(find darknet_ros)/config/ros_stereo_left.yaml" />
