@@ -1,6 +1,6 @@
 #include "object_3d_estimation.h"
 
-void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const darknet_ros_msgs::BoundingBoxes::ConstPtr& msgObjects)
+void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
 {
     ROS_WARN_STREAM("Entered Callback!");
 
@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     image_transport::ImageTransport it(nh);
 
     message_filters::Subscriber<sensor_msgs::Image> left_image_sub(nh, "/stereo/left/image_rect_color", 1);
-    message_filters::Subscriber<darknet_ros_msgs::BoundingBoxes> object_sub(nh, "/darknet_ros/bounding_boxes", 1);
+    message_filters::Subscriber<darknet_ros_msgs::BoundingBoxes> object_sub(nh, "/objects/left/bounding_boxes", 1);
 
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, darknet_ros_msgs::BoundingBoxes> MySyncPolicy;
     message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), left_image_sub, object_sub);
