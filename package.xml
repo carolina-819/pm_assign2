@@ -58,11 +58,15 @@
   <build_export_depend>cv_bridge</build_export_depend>
   <build_export_depend>image_transport</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
+  <build_export_depend>darknet_ros</build_export_depend>
+  <build_export_depend>darknet_ros_msgs</build_export_depend>
   <exec_depend>OpenCV</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>image_transport</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>libpcl-all</exec_depend>
+  <exec_depend>darknet_ros</exec_depend>
+  <exec_depend>darknet_ros_msgs</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

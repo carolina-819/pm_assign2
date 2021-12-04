@@ -13,22 +13,8 @@
 #include "tf2_ros/static_transform_broadcaster.h"
 #include <tf/transform_listener.h>
 
+#include "darknet_ros_msgs/BoundingBox.h"
+#include <darknet_ros_msgs/BoundingBoxes.h>
 
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloudXYZ;
-typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
+cv::Mat left_image;
 
-ros::Publisher pub_cloud_XYZ, pub_cloud_XYZRGB;
-PointCloudXYZ::Ptr msg_cloud_xyz;
-PointCloudXYZRGB::Ptr msg_cloud_xyz_rgb;
-
-cv::Ptr<cv::Feature2D> feature_detector;
-cv::Ptr<cv::DescriptorMatcher> descriptor_matcher;
-std::vector<cv::KeyPoint> keypoints_left, keypoints_right;
-cv::Mat descriptors_left, descriptors_right;
-
-typedef struct {
-    double fx, fy;
-    double cx, cy;
-} camera_parameters;
-
-camera_parameters left_camera, right_camera;

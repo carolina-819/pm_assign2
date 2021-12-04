@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   pcl_ros
   pcl_conversions
+  darknet_ros
+  darknet_ros_msgs
 )
 
 ## System dependencies are found with CMake's conventions
