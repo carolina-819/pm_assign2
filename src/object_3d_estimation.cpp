@@ -4,6 +4,36 @@ ros::Publisher pub_cloud_XYZ;
 tf::TransformListener *listener;
 
 
+
+void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
+{
+    cv::Mat cv_image = cv::Mat(cam_info.height, cam_info.width, CV_32FC1, cv::Scalar(std::numeric_limits<float>::max()));
+
+    for (int i=0; i<pc->points.size();i++){
+      if (pc->points[i].z == pc->points[i].z){
+          float z = pc->points[i].z*1000.0;
+          float u = (pc->points[i].x*1000.0*left_camera.fx) / z;
+          float v = (pc->points[i].y*1000.0*left_camera.fy) / z;
+          int pixel_pos_x = (int)(u + left_camera.cx);
+          int pixel_pos_y = (int)(v + left_camera.cy);
+
+      if (pixel_pos_x > (cam_info.width-1)){
+        pixel_pos_x = cam_info.width -1;
+      }
+      if (pixel_pos_y > (cam_info.height-1)){
+        pixel_pos_y = cam_info.height-1;
+      }
+      cv_image.at<float>(pixel_pos_y,pixel_pos_x) = z;
+      }
+    }
+
+    cv_image.convertTo(cv_image,CV_16UC1);
+
+    cv::imshow("PCL image", cv_image);
+    cv::waitKey(1);
+}
+
+
 void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointCloud2ConstPtr& pc_msg)
 {
 //    ROS_WARN_STREAM("Entered Callback!");
@@ -25,6 +55,16 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
    
 //    cv::imshow("Left image", left_image);
 //    cv::waitKey(1);
+
+
+    // Convert ros msg to pcl pointcloud
+    pcl::PCLPointCloud2 pcl_pc2;
+    pcl_conversions::toPCL(*pc_msg, pcl_pc2);
+    pcl::fromPCLPointCloud2(pcl_pc2, *pc);
+
+    ROS_WARN_STREAM("PCL -> Width = " << pc->width << " Height = " << pc->height);
+
+    PointCloudToDepthMap(pc);
 }
 
 void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
@@ -48,10 +88,40 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
         cv::rectangle(img_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
     }
 
-    cv::imshow("Left image w/ BBs", img_bb);
-    cv::waitKey(1);
+//    cv::imshow("Left image w/ BBs", img_bb);
+//    cv::waitKey(1);
 
-    ROS_WARN_STREAM("Number of boxes = " << objects.size());
+//    ROS_WARN_STREAM("Number of boxes = " << objects.size());
+}
+
+
+void get_left_camera_info()
+{
+    boost::shared_ptr<sensor_msgs::CameraInfo const> sharedCameraInfo;
+
+    do {
+        sharedCameraInfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/stereo/left/camera_info", ros::Duration(5));
+
+        if(sharedCameraInfo != NULL)
+        {
+            cam_info = *sharedCameraInfo;
+            left_camera.fx = cam_info.K[0];
+            left_camera.cx = cam_info.K[2];
+            left_camera.fy = cam_info.K[4];
+            left_camera.cy = cam_info.K[5];
+
+            ROS_WARN_STREAM("Left camera:");
+            ROS_WARN_STREAM("cx = " << left_camera.cx << " cy = " << left_camera.cy);
+            ROS_WARN_STREAM("fx = " << left_camera.fx << " fy = " << left_camera.fy);
+
+            ROS_WARN_STREAM("Width = " << cam_info.width << " Height = " << cam_info.height);
+        }
+        else
+        {
+//            ROS_ERROR("Couldn't get left camera info! Trying again...");
+            ros::Duration(1.0).sleep();
+        }
+    } while(sharedCameraInfo == NULL);
 }
 
 
@@ -77,6 +147,8 @@ int main(int argc, char** argv) {
     sync.registerCallback(boost::bind(&cbNewImage, _1, _2));
 
     ros::Subscriber bb_sub = nh.subscribe("/objects/left/bounding_boxes", 1, cbBoundingBoxes);
+
+    get_left_camera_info();
 
 
     while(ros::ok())

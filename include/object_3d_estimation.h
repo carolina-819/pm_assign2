@@ -21,3 +21,14 @@
 cv::Mat left_image;
 std::string frame_img, frame_pcl;
 
+typedef struct {
+    double fx, fy;
+    double cx, cy;
+} camera_parameters;
+
+camera_parameters left_camera;
+
+sensor_msgs::CameraInfo cam_info;
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr pc(new pcl::PointCloud<pcl::PointXYZ>);
+
