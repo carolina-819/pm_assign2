@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-<arg name="run_detector" default="true" />
+<arg name="run_detector" default="false" />
 
 
 <!-- Bags name -->
@@ -22,9 +22,9 @@
 <include file="$(find pm_assign2)/launch/tf_state_publisher.launch">
 </include>
 
-<node name="object_3d_estimation"  type="object_3d_estimation" pkg="pm_assign2">
+<node name="object_3d_estimation"  type="object_3d_estimation" pkg="pm_assign2" output="screen">
 <!-- Parameter for A2-->
-<rosparam param="frame_id" value="vision_frame"></rosparam>
+<rosparam param="frame_id">"vision_frame"</rosparam>
 </node>
 
 <!---->
