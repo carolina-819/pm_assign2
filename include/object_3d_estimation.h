@@ -25,5 +25,7 @@ typedef struct {
 
 camera_parameters left_camera;
 
-sensor_msgs::CameraInfo camera_parameters_msg;
+sensor_msgs::CameraInfo cam_info;
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr pc(new pcl::PointCloud<pcl::PointXYZ>);
 
