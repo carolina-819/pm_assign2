@@ -18,3 +18,12 @@
 
 cv::Mat left_image;
 
+typedef struct {
+    double fx, fy;
+    double cx, cy;
+} camera_parameters;
+
+camera_parameters left_camera;
+
+sensor_msgs::CameraInfo camera_parameters_msg;
+

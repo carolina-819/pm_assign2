@@ -11,6 +11,16 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
     left_image = cv_data->image;
 //    cv::imshow("Left image", left_image);
 //    cv::waitKey(1);
+
+
+    // Point cloud to Gray Scale -> Tests
+    cv::Mat gray_img;
+
+//    cv::cvtColor(left_image, gray_img, CV_BGR2GRAY);
+//    cv::imshow("Gray scale image", gray_img);
+//    cv::waitKey(1);
+
+
 }
 
 void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
@@ -34,10 +44,36 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
         cv::rectangle(img_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
     }
 
-    cv::imshow("Left image w/ BBs", img_bb);
-    cv::waitKey(1);
+//    cv::imshow("Left image w/ BBs", img_bb);
+//    cv::waitKey(1);
 
-    ROS_WARN_STREAM("Number of boxes = " << objects.size());
+//    ROS_WARN_STREAM("Number of boxes = " << objects.size());
+}
+
+
+void get_left_camera_info()
+{
+    boost::shared_ptr<sensor_msgs::CameraInfo const> sharedCameraInfo;
+
+    do {
+        sharedCameraInfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/stereo/left/camera_info", ros::Duration(5));
+
+        if(sharedCameraInfo != NULL)
+        {
+            camera_parameters_msg = *sharedCameraInfo;
+            left_camera.fx = camera_parameters_msg.K[0];
+            left_camera.cx = camera_parameters_msg.K[2];
+            left_camera.fy = camera_parameters_msg.K[4];
+            left_camera.cy = camera_parameters_msg.K[5];
+
+            ROS_WARN_STREAM("Left camera: \n fx=" << left_camera.fx << " fy=" << left_camera.fy << "\n cx=" << left_camera.cx << " cy=" << left_camera.cy);
+        }
+        else
+        {
+//            ROS_ERROR("Couldn't get left camera info! Trying again...");
+            ros::Duration(1.0).sleep();
+        }
+    } while(sharedCameraInfo == NULL);
 }
 
 
@@ -56,6 +92,8 @@ int main(int argc, char** argv) {
     sync.registerCallback(boost::bind(&cbNewImage, _1, _2));
 
     ros::Subscriber bb_sub = nh.subscribe("/objects/left/bounding_boxes", 1, cbBoundingBoxes);
+
+    get_left_camera_info();
 
 
     while(ros::ok())
