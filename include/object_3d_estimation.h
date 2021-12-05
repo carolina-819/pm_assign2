@@ -8,6 +8,8 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/features2d.hpp>
 #include "pcl_ros/point_cloud.h"
+#include <pcl_ros/transforms.h>
+#include <boost/shared_ptr.hpp>
 #include "pcl_conversions/pcl_conversions.h"
 #include "sensor_msgs/PointCloud2.h"
 #include "tf2_ros/static_transform_broadcaster.h"
@@ -17,4 +19,5 @@
 #include <darknet_ros_msgs/BoundingBoxes.h>
 
 cv::Mat left_image;
+std::string frame_img, frame_pcl;
 

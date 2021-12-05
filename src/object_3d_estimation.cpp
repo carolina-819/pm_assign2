@@ -1,4 +1,8 @@
 #include "object_3d_estimation.h"
+sensor_msgs::PointCloud2 cloud_framed;
+ros::Publisher pub_cloud_XYZ;
+tf::TransformListener *listener;
+
 
 void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointCloud2ConstPtr& pc_msg)
 {
@@ -9,6 +13,16 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
     cv_data = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 
     left_image = cv_data->image;
+    
+    //process point cloud
+
+    
+   
+    sensor_msgs::PointCloud2 temp_out;
+    pcl_ros::transformPointCloud(frame_img, *pc_msg, temp_out, *listener); 
+  std::cout << "wat" << std::endl;
+    pub_cloud_XYZ.publish(temp_out);
+   
 //    cv::imshow("Left image", left_image);
 //    cv::waitKey(1);
 }
@@ -47,7 +61,14 @@ int main(int argc, char** argv) {
 
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
+    listener = new tf::TransformListener();
+    
+    nh.getParam("/object_3d_estimation/frame_id_img", frame_img);
+    nh.getParam("/object_3d_estimation/frame_id_pcl", frame_pcl);
 
+    
+    
+    pub_cloud_XYZ =  nh.advertise<sensor_msgs::PointCloud2> ("points2", 1);
     message_filters::Subscriber<sensor_msgs::Image> left_image_sub(nh, "/stereo/left/image_rect_color", 1);
     message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub(nh, "/velodyne_points", 1);
 
