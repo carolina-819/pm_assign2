@@ -28,7 +28,6 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
     }
 
     cv_image.convertTo(cv_image,CV_16UC1);
-
     cv::imshow("PCL image", cv_image);
     cv::waitKey(1);
 }
@@ -50,7 +49,6 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
    
     sensor_msgs::PointCloud2 temp_out;
     pcl_ros::transformPointCloud(frame_img, *pc_msg, temp_out, *listener); 
-  std::cout << "wat" << std::endl;
     pub_cloud_XYZ.publish(temp_out);
    
 //    cv::imshow("Left image", left_image);
@@ -59,13 +57,13 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
 
     // Convert ros msg to pcl pointcloud
     pcl::PCLPointCloud2 pcl_pc2;
-    pcl_conversions::toPCL(*pc_msg, pcl_pc2);
+    pcl_conversions::toPCL(temp_out, pcl_pc2);
     pcl::fromPCLPointCloud2(pcl_pc2, *pc);
 
     ROS_WARN_STREAM("PCL -> Width = " << pc->width << " Height = " << pc->height);
 
     PointCloudToDepthMap(pc);
-}
+
 
 void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
 {
