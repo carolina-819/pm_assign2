@@ -6,21 +6,28 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
 {
     cv::Mat cv_image = cv::Mat(cam_info.height, cam_info.width, CV_32FC1, cv::Scalar(std::numeric_limits<float>::max()));
 
-    for (int i=0; i<pc->points.size();i++){
-      if (pc->points[i].z == pc->points[i].z){
-          float z = pc->points[i].z*1000.0;
-          float u = (pc->points[i].x*1000.0*left_camera.fx) / z;
-          float v = (pc->points[i].y*1000.0*left_camera.fy) / z;
+    for (int i=0; i<pc->points.size();i++)
+    {
+      if (pc->points[i].z == pc->points[i].z) // NaN values have the odd property that comparisons involving them are always false
+      {
+          ROS_WARN_STREAM("x=" << pc->points[i].x << " y=" << pc->points[i].y << " z=" << pc->points[i].z);
+//          ROS_WARN_STREAM("fx=" << left_camera.fx << " fy=" << left_camera.fy);
+          float z = pc->points[i].z;
+          float u = (pc->points[i].x*left_camera.fx) / z;
+          float v = (pc->points[i].y*left_camera.fy) / z;
+
           int pixel_pos_x = (int)(u + left_camera.cx);
           int pixel_pos_y = (int)(v + left_camera.cy);
+//          ROS_WARN_STREAM("u=" << u << " v=" << v << " z=" << z);
 
-      if (pixel_pos_x > (cam_info.width-1)){
-        pixel_pos_x = cam_info.width -1;
-      }
-      if (pixel_pos_y > (cam_info.height-1)){
-        pixel_pos_y = cam_info.height-1;
-      }
-      cv_image.at<float>(pixel_pos_y,pixel_pos_x) = z;
+          if (pixel_pos_x > (cam_info.width-1)) pixel_pos_x = cam_info.width -1;
+          if (pixel_pos_y > (cam_info.height-1)) pixel_pos_y = cam_info.height-1;
+
+          z = z * 1000;
+          ROS_WARN_STREAM("pos_x=" << pixel_pos_x << " pos_y=" << pixel_pos_y << " z=" << z);
+
+          cv_image.at<float>(pixel_pos_y,pixel_pos_x) = z;
+
       }
     }
 
@@ -39,25 +46,23 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
     cv_data = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 
     left_image = cv_data->image;
-    
-    //process point cloud
-
-    
-   
-    sensor_msgs::PointCloud2 temp_out;
-    pcl_ros::transformPointCloud(frame_img, *pc_msg, temp_out, *listener); 
-    pub_cloud_XYZ.publish(temp_out);
-   
 //    cv::imshow("Left image", left_image);
 //    cv::waitKey(1);
 
+    
+    //process point cloud   
+    sensor_msgs::PointCloud2 temp_out;
+    pcl_ros::transformPointCloud(frame_img, *pc_msg, temp_out, *listener);
+    pub_cloud_XYZ.publish(temp_out);
 
-    // Convert ros msg to pcl pointcloud
+
+    // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud
     pcl::PCLPointCloud2 pcl_pc2;
     pcl_conversions::toPCL(temp_out, pcl_pc2);
     pcl::fromPCLPointCloud2(pcl_pc2, *pc);
 
     ROS_WARN_STREAM("PCL -> Width = " << pc->width << " Height = " << pc->height);
+
 
     PointCloudToDepthMap(pc);
 }
@@ -132,9 +137,8 @@ int main(int argc, char** argv) {
     nh.getParam("/object_3d_estimation/frame_id_img", frame_img);
     nh.getParam("/object_3d_estimation/frame_id_pcl", frame_pcl);
 
-    
-    
     pub_cloud_XYZ =  nh.advertise<sensor_msgs::PointCloud2> ("points2", 1);
+
     message_filters::Subscriber<sensor_msgs::Image> left_image_sub(nh, "/stereo/left/image_rect_color", 1);
     message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub(nh, "/velodyne_points", 1);
 
