@@ -32,3 +32,9 @@ sensor_msgs::CameraInfo cam_info;
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr pc(new pcl::PointCloud<pcl::PointXYZ>);
 
+sensor_msgs::PointCloud2 cloud_framed;
+
+ros::Publisher pub_cloud_XYZ;
+
+tf::TransformListener *listener;
+

@@ -1,7 +1,4 @@
 #include "object_3d_estimation.h"
-sensor_msgs::PointCloud2 cloud_framed;
-ros::Publisher pub_cloud_XYZ;
-tf::TransformListener *listener;
 
 
 
@@ -63,6 +60,7 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
     ROS_WARN_STREAM("PCL -> Width = " << pc->width << " Height = " << pc->height);
 
     PointCloudToDepthMap(pc);
+}
 
 
 void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
