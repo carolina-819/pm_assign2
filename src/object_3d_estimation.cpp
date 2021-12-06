@@ -10,7 +10,7 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
     {
       if (pc->points[i].z == pc->points[i].z) // NaN values have the odd property that comparisons involving them are always false
       {
-          ROS_WARN_STREAM("x=" << pc->points[i].x << " y=" << pc->points[i].y << " z=" << pc->points[i].z);
+//          ROS_WARN_STREAM("x=" << pc->points[i].x << " y=" << pc->points[i].y << " z=" << pc->points[i].z);
 //          ROS_WARN_STREAM("fx=" << left_camera.fx << " fy=" << left_camera.fy);
           float z = pc->points[i].z;
           float u = (pc->points[i].x*left_camera.fx) / z;
@@ -24,14 +24,15 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
           if (pixel_pos_y > (cam_info.height-1)) pixel_pos_y = cam_info.height-1;
 
           z = z * 1000;
-          ROS_WARN_STREAM("pos_x=" << pixel_pos_x << " pos_y=" << pixel_pos_y << " z=" << z);
+//          ROS_WARN_STREAM("pos_x=" << pixel_pos_x << " pos_y=" << pixel_pos_y << " z=" << z << "\n");
 
-          cv_image.at<float>(pixel_pos_y,pixel_pos_x) = z;
+          cv_image.at<float>(pixel_pos_y,pixel_pos_x) = 65535 - z;
 
       }
     }
 
     cv_image.convertTo(cv_image,CV_16UC1);
+    cv::resize(cv_image, cv_image, cv::Size(600, 500));
     cv::imshow("PCL image", cv_image);
     cv::waitKey(1);
 }
@@ -61,7 +62,7 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
     pcl_conversions::toPCL(temp_out, pcl_pc2);
     pcl::fromPCLPointCloud2(pcl_pc2, *pc);
 
-    ROS_WARN_STREAM("PCL -> Width = " << pc->width << " Height = " << pc->height);
+//    ROS_WARN_STREAM("PCL -> Width = " << pc->width << " Height = " << pc->height);
 
 
     PointCloudToDepthMap(pc);
