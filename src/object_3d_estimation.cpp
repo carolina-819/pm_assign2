@@ -4,7 +4,7 @@
 
 void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
 {
-    cv::Mat cv_image = cv::Mat(cam_info.height, cam_info.width, CV_32FC1, cv::Scalar(std::numeric_limits<float>::max()));
+    depth_map = cv::Mat(cam_info.height, cam_info.width, CV_32FC1, cv::Scalar(std::numeric_limits<float>::max()));
 
     for (int i=0; i<pc->points.size();i++)
     {
@@ -26,15 +26,17 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
 //          z = z * 1000;
 //          ROS_WARN_STREAM("pos_x=" << pixel_pos_x << " pos_y=" << pixel_pos_y << " z=" << z << "\n");
 
-          if(z>=0) cv_image.at<float>(pixel_pos_y,pixel_pos_x) = 255 - z * 255 / 50;
+          if(z>=0) depth_map.at<float>(pixel_pos_y,pixel_pos_x) = 255 - z * 255 / 50;
 
       }
     }
 
-    cv_image.convertTo(cv_image,CV_8UC1);
-    cv::resize(cv_image, cv_image, cv::Size(600, 500));
-    cv::imshow("PCL image", cv_image);
-    cv::waitKey(1);
+    depth_map.convertTo(depth_map,CV_8UC1);
+
+//    cv::Mat smaller_img; // copy to vizualize in smaller window, similiar to YOLO window
+//    cv::resize(depth_map, smaller_img, cv::Size(600, 500));
+//    cv::imshow("PCL image", smaller_img);
+//    cv::waitKey(1);
 }
 
 
@@ -73,6 +75,12 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
 {
     cv::Mat img_bb = left_image.clone();
 
+    cv::Mat depth_bb = depth_map.clone();
+    depth_bb.convertTo(depth_bb,CV_8UC3); // to be able to draw rgb rectangle
+    cvtColor(depth_bb, depth_bb, cv::COLOR_GRAY2BGR);
+
+
+
     // Get Bounding Box
     int n = msgObjects->bounding_boxes.size();
     int x, y, w, h;
@@ -88,10 +96,13 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
         objects.push_back(cv::Rect(x, y, w, h));
 
         cv::rectangle(img_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
+
+        cv::rectangle(depth_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
     }
 
-//    cv::imshow("Left image w/ BBs", img_bb);
-//    cv::waitKey(1);
+    cv::imshow("Left image w/ BBs", img_bb);
+    cv::imshow("Depth map w/ BBs", depth_bb);
+    cv::waitKey(1);
 
 //    ROS_WARN_STREAM("Number of boxes = " << objects.size());
 }
@@ -133,6 +144,7 @@ int main(int argc, char** argv) {
 
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
+
     listener = new tf::TransformListener();
     
     nh.getParam("/object_3d_estimation/frame_id_img", frame_img);

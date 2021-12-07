@@ -19,6 +19,8 @@
 #include <darknet_ros_msgs/BoundingBoxes.h>
 
 cv::Mat left_image;
+cv::Mat depth_map;
+
 std::string frame_img, frame_pcl;
 
 typedef struct {
