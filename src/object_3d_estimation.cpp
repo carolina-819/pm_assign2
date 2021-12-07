@@ -23,15 +23,15 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
           if (pixel_pos_x > (cam_info.width-1)) pixel_pos_x = cam_info.width -1;
           if (pixel_pos_y > (cam_info.height-1)) pixel_pos_y = cam_info.height-1;
 
-          z = z * 1000;
+//          z = z * 1000;
 //          ROS_WARN_STREAM("pos_x=" << pixel_pos_x << " pos_y=" << pixel_pos_y << " z=" << z << "\n");
 
-          cv_image.at<float>(pixel_pos_y,pixel_pos_x) = 65535 - z;
+          if(z>=0) cv_image.at<float>(pixel_pos_y,pixel_pos_x) = 255 - z * 255 / 50;
 
       }
     }
 
-    cv_image.convertTo(cv_image,CV_16UC1);
+    cv_image.convertTo(cv_image,CV_8UC1);
     cv::resize(cv_image, cv_image, cv::Size(600, 500));
     cv::imshow("PCL image", cv_image);
     cv::waitKey(1);
