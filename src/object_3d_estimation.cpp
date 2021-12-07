@@ -71,7 +71,7 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
 }
 
 
-void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
+void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
 {
     cv::Mat img_bb = left_image.clone();
 
@@ -80,24 +80,37 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msgObjects)
     cvtColor(depth_bb, depth_bb, cv::COLOR_GRAY2BGR);
 
 
-
     // Get Bounding Box
-    int n = msgObjects->bounding_boxes.size();
+    int n = msg_BBs->bounding_boxes.size();
     int x, y, w, h;
     std::vector<cv::Rect> objects;
     objects.reserve(n);
     for (int i = 0; i < n; i++)
     {
-        x = msgObjects->bounding_boxes[i].xmin;
-        y = msgObjects->bounding_boxes[i].ymin;
-        w = msgObjects->bounding_boxes[i].xmax - x;
-        h = msgObjects->bounding_boxes[i].ymax - y;
+        if(msg_BBs->bounding_boxes[i].Class == "car")
+        {
+            x = msg_BBs->bounding_boxes[i].xmin;
+            y = msg_BBs->bounding_boxes[i].ymin;
+            w = msg_BBs->bounding_boxes[i].xmax - x;
+            h = msg_BBs->bounding_boxes[i].ymax - y;
 
-        objects.push_back(cv::Rect(x, y, w, h));
+            objects.push_back(cv::Rect(x, y, w, h));
 
-        cv::rectangle(img_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
+            if(msg_BBs->bounding_boxes[i].probability < 0.4)
+            {
+                ROS_WARN_STREAM("Red=" << msg_BBs->bounding_boxes[i].probability*100 << "\n");
 
-        cv::rectangle(depth_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
+                cv::rectangle(img_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
+                cv::rectangle(depth_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
+            }
+            else
+            {
+                ROS_WARN_STREAM("Green=" << msg_BBs->bounding_boxes[i].probability*100 << "\n");
+
+                cv::rectangle(img_bb, objects[i], cv::Scalar(0, 255, 0), 1, 8, 0);
+                cv::rectangle(depth_bb, objects[i], cv::Scalar(0, 255, 0), 1, 8, 0);
+            }
+        }
     }
 
     cv::imshow("Left image w/ BBs", img_bb);
@@ -160,6 +173,7 @@ int main(int argc, char** argv) {
     sync.registerCallback(boost::bind(&cbNewImage, _1, _2));
 
     ros::Subscriber bb_sub = nh.subscribe("/objects/left/bounding_boxes", 1, cbBoundingBoxes);
+
 
     get_left_camera_info();
 
