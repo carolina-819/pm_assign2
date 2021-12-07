@@ -79,12 +79,13 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
     depth_bb.convertTo(depth_bb,CV_8UC3); // to be able to draw rgb rectangle
     cvtColor(depth_bb, depth_bb, cv::COLOR_GRAY2BGR);
 
-
-    // Get Bounding Box
+    // Get Number of Bounding Boxes
     int n = msg_BBs->bounding_boxes.size();
     int x, y, w, h;
-    std::vector<cv::Rect> objects;
-    objects.reserve(n);
+
+    // Get Car Bounding Box Sizes
+    std::vector<double> sizes;
+    sizes.reserve(n);
     for (int i = 0; i < n; i++)
     {
         if(msg_BBs->bounding_boxes[i].Class == "car")
@@ -94,30 +95,64 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
             w = msg_BBs->bounding_boxes[i].xmax - x;
             h = msg_BBs->bounding_boxes[i].ymax - y;
 
+            sizes.push_back(w*h);
+        }
+    }
+
+    // Filter outliars
+    double max = *max_element(sizes.begin(), sizes.end());
+    double min = *min_element(sizes.begin(), sizes.end());
+    double middle = (max+min)/2;
+//    ROS_WARN_STREAM("Middle=" << middle);
+
+
+    // Get Bounding Boxes
+    std::vector<cv::Rect> good_objects;
+    std::vector<cv::Rect> objects;
+    objects.reserve(n);
+    for (int i = 0; i < n; i++)
+    {
+        x = msg_BBs->bounding_boxes[i].xmin;
+        y = msg_BBs->bounding_boxes[i].ymin;
+        w = msg_BBs->bounding_boxes[i].xmax - x;
+        h = msg_BBs->bounding_boxes[i].ymax - y;
+
+        double BB_size = w*h;
+//        ROS_WARN_STREAM("Size=" << BB_size);
+
+        // Filter Bounding Boxes
+        if(msg_BBs->bounding_boxes[i].Class == "car" && BB_size >= middle && h < w*1.5)
+        {
             objects.push_back(cv::Rect(x, y, w, h));
 
-            if(msg_BBs->bounding_boxes[i].probability < 0.4)
-            {
-                ROS_WARN_STREAM("Red=" << msg_BBs->bounding_boxes[i].probability*100 << "\n");
+            double car_prob = msg_BBs->bounding_boxes[i].probability;
 
-                cv::rectangle(img_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
-                cv::rectangle(depth_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
+            if(car_prob < 0.35)
+            {
+//                ROS_WARN_STREAM("Red=" << car_prob*100 << "\n");
+
+//                cv::rectangle(img_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
+//                cv::rectangle(depth_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
             }
             else
             {
-                ROS_WARN_STREAM("Green=" << msg_BBs->bounding_boxes[i].probability*100 << "\n");
+//                ROS_WARN_STREAM("Green=" << car_prob*100);
+//                ROS_WARN_STREAM("id=" << i << " Size=" << BB_size << "\n");
+                ROS_WARN_STREAM("Detetou");
 
                 cv::rectangle(img_bb, objects[i], cv::Scalar(0, 255, 0), 1, 8, 0);
-                cv::rectangle(depth_bb, objects[i], cv::Scalar(0, 255, 0), 1, 8, 0);
+//                cv::rectangle(depth_bb, objects[i], cv::Scalar(0, 255, 0), 1, 8, 0);
+
+                good_objects.push_back(objects[i]);
             }
         }
     }
 
-    cv::imshow("Left image w/ BBs", img_bb);
-    cv::imshow("Depth map w/ BBs", depth_bb);
-    cv::waitKey(1);
+    ROS_WARN_STREAM("-----------\n");
 
-//    ROS_WARN_STREAM("Number of boxes = " << objects.size());
+    cv::imshow("Left image w/ BBs", img_bb);
+//    cv::imshow("Depth map w/ BBs", depth_bb);
+    cv::waitKey(1);
 }
 
 
