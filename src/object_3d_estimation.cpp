@@ -48,7 +48,7 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
     cv_bridge::CvImageConstPtr cv_data;
     cv_data = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 
-    left_image = cv_data->image;
+    left_image = cv_data->image.clone();
 //    cv::imshow("Left image", left_image);
 //    cv::waitKey(1);
 
@@ -126,29 +126,37 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
             if(car_prob < 0.35)
             {
 //                ROS_WARN_STREAM("Red=" << car_prob*100 << "\n");
-
 //                cv::rectangle(img_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
             }
             else
             {
 //                ROS_WARN_STREAM("Green=" << car_prob*100);
-//                ROS_WARN_STREAM("id=" << i << " Size=" << BB_size << "\n");
-
                 cv::rectangle(img_bb, objects[i], cv::Scalar(0, 255, 0), 1, 8, 0);
 
-                car_ROIs.push_back(objects[i]);
-
-                ROS_WARN_STREAM("x="<<car_ROIs[i].x<<" y="<<car_ROIs[i].y<<" w="<<car_ROIs[i].width<<" h="<<car_ROIs[i].height<<"\n");
+                // Accept Only Bounding Boxes With Correct Dimensions
+                if(objects[i].width > 0 && objects[i].width < cam_info.width && objects[i].height > 0 && objects[i].height < cam_info.height)
+                {
+                    car_ROIs.push_back(objects[i]);
+                    ROS_WARN_STREAM("x="<<car_ROIs[i].x<<" y="<<car_ROIs[i].y<<" w="<<car_ROIs[i].width<<" h="<<car_ROIs[i].height<<"\n");
+                }
             }
         }
     }
 
-    //    cv::Rect roi(good_objects[0].x, good_objects[0].y, good_objects[0].width, good_objects[0].height);
-    //    cv::Mat image_roi = left_image(roi);
-    //    cv::imshow("ROI", image_roi);
+    if(car_ROIs.size() != 0)
+    {
+        cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
+        cv::Mat segmented = cv::Mat::zeros(left_image.size(), left_image.type());
 
-        cv::imshow("Left image w/ BBs", img_bb);
+        cv::rectangle(mask, car_ROIs[0], cv::Scalar(255,255,255),-1, 8, 0);
+        left_image.copyTo(segmented, mask);
+
+        cv::imshow("Segmented", segmented);
         cv::waitKey(1);
+    }
+
+//        cv::imshow("Left image w/ BBs", img_bb);
+//        cv::waitKey(1);
 
     return car_ROIs;
 }
