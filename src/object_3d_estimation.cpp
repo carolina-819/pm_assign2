@@ -114,7 +114,7 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
         h = car_BBs.bounding_boxes[i].ymax - y;
 
         double BB_size = w*h;
-//        ROS_WARN_STREAM("Size=" << BB_size);
+        ROS_WARN_STREAM("Size=" << BB_size);
 
         // Filter Bounding Boxes
         if(BB_size >= middle && h < w*1.5)
@@ -137,7 +137,7 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
                 if(objects[i].width > 0 && objects[i].width < cam_info.width && objects[i].height > 0 && objects[i].height < cam_info.height)
                 {
                     car_ROIs.push_back(objects[i]);
-                    ROS_WARN_STREAM("x="<<car_ROIs[i].x<<" y="<<car_ROIs[i].y<<" w="<<car_ROIs[i].width<<" h="<<car_ROIs[i].height<<"\n");
+//                    ROS_WARN_STREAM("x="<<car_ROIs[i].x<<" y="<<car_ROIs[i].y<<" w="<<car_ROIs[i].width<<" h="<<car_ROIs[i].height<<"\n");
                 }
             }
         }
@@ -148,7 +148,12 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
         cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
         cv::Mat segmented = cv::Mat::zeros(left_image.size(), left_image.type());
 
-        cv::rectangle(mask, car_ROIs[0], cv::Scalar(255,255,255),-1, 8, 0);
+        for(int i=0; i< car_ROIs.size(); i++)
+        {
+            cv::rectangle(mask, car_ROIs[i], cv::Scalar(255,255,255),-1, 8, 0);
+
+        }
+
         left_image.copyTo(segmented, mask);
 
         cv::imshow("Segmented", segmented);
