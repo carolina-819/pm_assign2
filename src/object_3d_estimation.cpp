@@ -34,8 +34,8 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
 //    cv::Mat smaller_img; // copy to vizualize in smaller window, similiar to YOLO window
 //    cv::resize(depth_map, smaller_img, cv::Size(600, 500));
 //    cv::imshow("PCL image", smaller_img);
-    cv::imshow("Depth Map", depth_map);
-    cv::waitKey(1);
+//    cv::imshow("Depth Map", depth_map);
+//    cv::waitKey(1);
 }
 
 
@@ -70,9 +70,53 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
 }
 
 
+std::vector<int> enlargeBBs(int x, int y, int w, int h)
+{
+    int x_new, y_new, w_new, h_new;
+
+    if(x-x/3 >= 0)
+    {
+        x_new = x- x/3;
+        w_new = w + x/3;
+
+        if(x_new + w_new+w/3 < cam_info.width) w_new += w/3;
+        else w_new = cam_info.width - x_new;
+    }
+    else
+    {
+        x_new = x;
+        w_new = w;
+    }
+
+    if(y-y/3 >= 0)
+    {
+        y_new = y - y/3;
+        h_new = h + y/3;
+
+        if(y_new + h_new+h/3 < cam_info.height) h_new += h/3;
+        else h_new = cam_info.height - y_new;
+    }
+    else
+    {
+        y_new = y;
+        h_new = h;
+    }
+
+    std::vector<int> new_points;
+    new_points.reserve(4);
+
+    new_points.push_back(x_new);
+    new_points.push_back(y_new);
+    new_points.push_back(w_new);
+    new_points.push_back(h_new);
+
+    return new_points;
+}
+
+
 std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car_BBs)
 {
-    cv::Mat img_bb = left_image.clone();
+//    cv::Mat img_bb = left_image.clone();
 
     int n_cars = car_BBs.bounding_boxes.size();
 
@@ -98,13 +142,13 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
     // Filter outliars
     double max = *max_element(sizes.begin(), sizes.end());
     double min = *min_element(sizes.begin(), sizes.end());
-    double middle = (max+min)/2;
-    ROS_WARN_STREAM("Middle=" << middle);
+    double middle = (max + min)/ 2;
+//    ROS_WARN_STREAM("Middle=" << middle);
+
+    double mid_middle = (middle + min) / 2; // To filter very small BBs
 
 
     // Get Bounding Boxes
-    std::vector<cv::Rect> objects;
-
     for (int i = 0; i < n_cars; i++)
     {
         x = car_BBs.bounding_boxes[i].xmin;
@@ -113,30 +157,33 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
         h = car_BBs.bounding_boxes[i].ymax - y;
 
         double BB_size = w*h;
-        ROS_WARN_STREAM("Size=" << BB_size);
+//        ROS_WARN_STREAM("Size=" << BB_size);
 
         // Filter Bounding Boxes
-        if(BB_size >= middle && h < w*1.5)
+        if(BB_size >= mid_middle && h < w*1.5)
         {
-            objects.push_back(cv::Rect(x, y, w, h));
-
             double car_prob = car_BBs.bounding_boxes[i].probability;
 
-            if(car_prob < 0.35)
+            if(car_prob >= 0.35)
             {
-//                ROS_WARN_STREAM("Red=" << car_prob*100 << "\n");
-//                cv::rectangle(img_bb, objects[i], cv::Scalar(0, 0, 255), 1, 8, 0);
-            }
-            else
-            {
-//                ROS_WARN_STREAM("Green=" << car_prob*100);
-                cv::rectangle(img_bb, objects[i], cv::Scalar(0, 255, 0), 1, 8, 0);
-
                 // Accept Only Bounding Boxes With Correct Dimensions
-                if(objects[i].width > 0 && objects[i].width < cam_info.width && objects[i].height > 0 && objects[i].height < cam_info.height)
+                if(w > 0 && w < cam_info.width && h > 0 && h < cam_info.height)
                 {
-                    car_ROIs.push_back(objects[i]);
-//                    ROS_WARN_STREAM("x="<<car_ROIs[i].x<<" y="<<car_ROIs[i].y<<" w="<<car_ROIs[i].width<<" h="<<car_ROIs[i].height<<"\n");
+                    ROS_WARN_STREAM("x="<<x<<" y="<<y<<" w="<<w<<" h="<<h);
+
+                    // Expand BBs (respecting limits)
+                    std::vector<int> new_points = enlargeBBs(x, y, w, h);
+                    x = new_points[0];
+                    y = new_points[1];
+                    w = new_points[2];
+                    h = new_points[3];
+
+                    // Save BBs
+                    car_ROIs.push_back(cv::Rect(x, y, w, h));
+                    ROS_WARN_STREAM("x="<<car_ROIs[i].x<<" y="<<car_ROIs[i].y<<" w="<<car_ROIs[i].width<<" h="<<car_ROIs[i].height<<"\n");
+
+//                      ROS_WARN_STREAM("Probability=" << car_prob*100);
+//                      cv::rectangle(img_bb, car_ROIs[i], cv::Scalar(0, 255, 0), 1, 8, 0);
                 }
             }
         }
@@ -150,7 +197,6 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
         for(int i=0; i< car_ROIs.size(); i++)
         {
             cv::rectangle(mask, car_ROIs[i], cv::Scalar(255,255,255),-1, 8, 0);
-
         }
 
         left_image.copyTo(segmented, mask);
