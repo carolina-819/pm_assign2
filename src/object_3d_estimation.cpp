@@ -212,6 +212,24 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
 }
 
 
+void getClosestCar(const std::vector<cv::Rect> bbs){
+    double min_local = 10000.0, min_geral = 10000.0, max;
+    int min_geral_index = 0;
+    cv::Mat dp_m = depth_map.clone();
+    for(std::size_t i = 0; i < bbs.size(); i++){
+        cv::Mat croppedImage = dp_m(bbs[i]);
+        cv::minMaxLoc(croppedImage, &min_local, &max);
+        if(min_local < min_geral){
+            min_geral = min_local;
+            min_geral_index = i;
+        }
+    }
+    ROS_WARN_STREAM("x: " << bbs[min_geral_index].x);
+    cv::rectangle(depth_map, bbs[min_geral_index], cv::Scalar(0, 255, 0), 1, 8, 0);
+    cv::imshow("Depth Map", depth_map);
+    cv::waitKey(1);
+}
+
 void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
 {
     cv::Mat img_bb = left_image.clone();
@@ -236,6 +254,7 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
     // Filter Irrelevant Car Bounding Boxes
     std::vector<cv::Rect> car_ROIs;
     car_ROIs = FilterBoundingBoxesRGB(car_BBs);
+    getClosestCar(car_ROIs);
 }
 
 
