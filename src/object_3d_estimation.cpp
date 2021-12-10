@@ -8,7 +8,7 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
 
     for (int i=0; i<pc->points.size();i++)
     {
-      if (pc->points[i].z == pc->points[i].z) // NaN values have the odd property that comparisons involving them are always false
+      if (pc->points[i].z == pc->points[i].z && pc->points[i].z >= 0) // NaN values have the odd property that comparisons involving them are always false
       {
 //          ROS_WARN_STREAM("x=" << pc->points[i].x << " y=" << pc->points[i].y << " z=" << pc->points[i].z);
 //          ROS_WARN_STREAM("fx=" << left_camera.fx << " fy=" << left_camera.fy);
@@ -20,23 +20,22 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
           int pixel_pos_y = (int)(v + left_camera.cy);
 //          ROS_WARN_STREAM("u=" << u << " v=" << v << " z=" << z);
 
-          if (pixel_pos_x > (cam_info.width-1)) pixel_pos_x = cam_info.width -1;
+          if (pixel_pos_x > (cam_info.width-1)) pixel_pos_x = cam_info.width-1;
           if (pixel_pos_y > (cam_info.height-1)) pixel_pos_y = cam_info.height-1;
 
-//          z = z * 1000;
 //          ROS_WARN_STREAM("pos_x=" << pixel_pos_x << " pos_y=" << pixel_pos_y << " z=" << z << "\n");
 
-          if(z>=0) depth_map.at<float>(pixel_pos_y,pixel_pos_x) = 255 - z * 255 / 50;
-
+          depth_map.at<float>(pixel_pos_y,pixel_pos_x) = z;
       }
     }
 
-    depth_map.convertTo(depth_map,CV_8UC1);
+    depth_map.convertTo(depth_map, CV_8UC1);
 
 //    cv::Mat smaller_img; // copy to vizualize in smaller window, similiar to YOLO window
 //    cv::resize(depth_map, smaller_img, cv::Size(600, 500));
 //    cv::imshow("PCL image", smaller_img);
-//    cv::waitKey(1);
+    cv::imshow("Depth Map", depth_map);
+    cv::waitKey(1);
 }
 
 
