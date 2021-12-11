@@ -217,7 +217,7 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
                 // Accept Only Bounding Boxes With Correct Dimensions
                 if(w > 0 && w < cam_info.width && h > 0 && h < cam_info.height)
                 {
-                    ROS_WARN_STREAM("x="<<x<<" y="<<y<<" w="<<w<<" h="<<h);
+//                    ROS_WARN_STREAM("x="<<x<<" y="<<y<<" w="<<w<<" h="<<h);
 
                     // Expand BBs (respecting limits)
                     std::vector<int> new_points = enlargeBBs(x, y, w, h);
@@ -228,7 +228,7 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
 
                     // Save BBs
                     car_ROIs.push_back(cv::Rect(x, y, w, h));
-                    ROS_WARN_STREAM("x="<<car_ROIs[i].x<<" y="<<car_ROIs[i].y<<" w="<<car_ROIs[i].width<<" h="<<car_ROIs[i].height<<"\n");
+//                    ROS_WARN_STREAM("x="<<car_ROIs[i].x<<" y="<<car_ROIs[i].y<<" w="<<car_ROIs[i].width<<" h="<<car_ROIs[i].height<<"\n");
 
 //                      ROS_WARN_STREAM("Probability=" << car_prob*100);
 //                      cv::rectangle(img_bb, car_ROIs[i], cv::Scalar(0, 255, 0), 1, 8, 0);
@@ -269,32 +269,53 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
     return car_ROIs;
 }
 
-void getClosestCar(const std::vector<cv::Rect> bbs){
-    double min_local = 10000.0, min_geral = 10000.0, max;
-    int min_geral_index = 0;
-    cv::Mat dp_m = depth_map.clone();
-    for(std::size_t i = 0; i < bbs.size(); i++){
-        cv::Mat croppedImage = dp_m(bbs[i]);
-        cv::minMaxLoc(croppedImage, &min_local, &max);
-        if(min_local < min_geral){
-            min_geral = min_local;
-            min_geral_index = i;
+
+void getClosestCar(std::vector<cv::Rect> bbs)
+{
+    cv::Mat dm = depth_map.clone();
+
+    double avg = 0, min_avg = 1000;
+    int idx;
+
+    for(int i = 0; i < bbs.size(); i++)
+    {
+        cv::Mat cropped_dp = dm(bbs[i]);
+
+        avg = cv::mean(cropped_dp)[0];
+        ROS_WARN_STREAM("mean="<<avg);
+
+        if(avg < min_avg)
+        {
+            min_avg = avg;
+            idx = i;
         }
     }
-    ROS_WARN_STREAM("x: " << bbs[min_geral_index].x);
-    cv::rectangle(depth_map, bbs[min_geral_index], cv::Scalar(0, 255, 0), 1, 8, 0);
-    cv::imshow("Depth Map", depth_map);
-    cv::waitKey(1);
-}
 
-void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
-{
-    cv::Mat img_bb = left_image.clone();
+    ROS_WARN_STREAM("min_avg="<<min_avg);
 
+    // Visualize Closest BB's Point Cloud With Color
     cv::Mat depth_bb = depth_map.clone();
     depth_bb.convertTo(depth_bb,CV_8UC3); // to be able to draw rgb rectangle
     cvtColor(depth_bb, depth_bb, cv::COLOR_GRAY2BGR);
 
+    cv::Mat mask = cv::Mat::zeros(depth_bb.size(), depth_bb.type());
+    cv::Mat segmented = cv::Mat::zeros(depth_bb.size(), depth_bb.type());
+    cv::rectangle(mask, bbs[idx], cv::Scalar(255, 255, 255),-1, 8, 0);
+    depth_bb.copyTo(segmented, mask);
+
+    cv::Mat color_dm;
+    applyColorMap(segmented, color_dm, cv::COLORMAP_HOT);
+
+    cv::rectangle(color_dm, bbs[idx], cv::Scalar(0, 255, 0), 1, 8, 0);
+
+    cv::imshow("Colored Depth Map", color_dm);
+
+    cv::waitKey(1);
+}
+
+
+void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
+{
     darknet_ros_msgs::BoundingBoxes car_BBs;
 
     // Filter Car Bounding Boxes
@@ -311,7 +332,9 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
     // Filter Irrelevant Car Bounding Boxes
     std::vector<cv::Rect> car_ROIs;
     car_ROIs = FilterBoundingBoxesRGB(car_BBs);
-    //getClosestCar(car_ROIs);
+
+    // Get Closest Car From Depth Map
+    getClosestCar(car_ROIs);
 }
 
 void get_left_camera_info()
