@@ -6,6 +6,7 @@
         "hash_set": "cpp",
         "initializer_list": "cpp",
         "string_view": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "new": "cpp"
     }
 }

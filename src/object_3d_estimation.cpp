@@ -20,8 +20,7 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
           int pixel_pos_y = (int)(v + left_camera.cy);
 //          ROS_WARN_STREAM("u=" << u << " v=" << v << " z=" << z);
 
-          if (pixel_pos_x > (cam_info.width-1)) pixel_pos_x = cam_info.width-1;
-          if (pixel_pos_y > (cam_info.height-1)) pixel_pos_y = cam_info.height-1;
+          if (pixel_pos_x > (cam_info.width-1) || pixel_pos_y > (cam_info.height-1)) continue;
 
 //          ROS_WARN_STREAM("pos_x=" << pixel_pos_x << " pos_y=" << pixel_pos_y << " z=" << z << "\n");
 
@@ -31,12 +30,61 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
 
     depth_map.convertTo(depth_map, CV_8UC1);
 
-//    cv::Mat smaller_img; // copy to vizualize in smaller window, similiar to YOLO window
-//    cv::resize(depth_map, smaller_img, cv::Size(600, 500));
-//    cv::imshow("PCL image", smaller_img);
+    cv::Mat smaller_img; // copy to vizualize in smaller window, similiar to YOLO window
+    cv::resize(depth_map, smaller_img, cv::Size(600, 500));
+    cv::imshow("PCL image", smaller_img);
 //    cv::imshow("Depth Map", depth_map);
-//    cv::waitKey(1);
+    cv::waitKey(1);
 }
+
+void depthMapToPointcloud(cv::Mat xyz_img, cv::Mat rgb_img){
+    
+    cv::Mat depth = xyz_img.clone();
+    cv::Mat image = rgb_img.clone();
+    float z, y, x;
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+     depth.convertTo(depth, CV_32F);
+
+      if (!depth.data) {
+        std::cerr << "No depth data!!!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    if(image.rows != depth.rows || image.cols != depth.cols){
+        std::cerr << "Different sizes" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    pointcloud->header.frame_id = "vision_frame";
+    pointcloud->width = depth.cols; //Dimensions must be initialized to use 2-D indexing 
+    pointcloud->height = depth.rows;
+     for (int v = 0; v < depth.rows; v ++)
+    {
+        for (int u = 0; u < depth.cols; u ++)
+        {
+            float Z = depth.at<float>(v, u);
+
+            pcl::PointXYZRGB p;
+            p.z = Z;
+            p.x = ((u - left_camera.cx) * Z / left_camera.fx);
+            p.y = ((v - left_camera.cy) * Z / left_camera.fy);
+            p.r = image.at<cv::Vec3b>(v, u)[2];
+            p.g = image.at<cv::Vec3b>(v, u)[1];
+            p.b = image.at<cv::Vec3b>(v, u)[0];  
+
+
+            pointcloud->points.push_back(p);
+
+        }
+    }
+    
+    //pointcloud->width = pointcloud.size();
+    //converter para sensor_msgs
+    sensor_msgs::PointCloud2 cloud_msg;
+    pcl::toROSMsg(*pointcloud.get(),cloud_msg );
+     pub_cloud_depth.publish(cloud_msg);
+}
+   
+  
 
 
 void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointCloud2ConstPtr& pc_msg)
@@ -67,8 +115,9 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
 
 
     PointCloudToDepthMap(pc);
+    depthMapToPointcloud(depth_map, left_image);
+    
 }
-
 
 std::vector<int> enlargeBBs(int x, int y, int w, int h)
 {
@@ -112,7 +161,6 @@ std::vector<int> enlargeBBs(int x, int y, int w, int h)
 
     return new_points;
 }
-
 
 std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car_BBs)
 {
@@ -207,10 +255,19 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
 
 //        cv::imshow("Left image w/ BBs", img_bb);
 //        cv::waitKey(1);
+    pm_assign2::bounding redbb;
+    redbb.header.stamp = ros::Time::now();
+    redbb.xp = 0.0;
+    redbb.yp = 0.0;
+    redbb.zp = 0.0;
+    redbb.x = car_ROIs[0].x;
+    redbb.y = car_ROIs[0].y;
+    redbb.width = car_ROIs[0].width;
+    redbb.height = car_ROIs[0].height;
 
+    pub_red_bb.publish(redbb);
     return car_ROIs;
 }
-
 
 void getClosestCar(const std::vector<cv::Rect> bbs){
     double min_local = 10000.0, min_geral = 10000.0, max;
@@ -254,9 +311,8 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
     // Filter Irrelevant Car Bounding Boxes
     std::vector<cv::Rect> car_ROIs;
     car_ROIs = FilterBoundingBoxesRGB(car_BBs);
-    getClosestCar(car_ROIs);
+    //getClosestCar(car_ROIs);
 }
-
 
 void get_left_camera_info()
 {
@@ -300,8 +356,9 @@ int main(int argc, char** argv) {
     nh.getParam("/object_3d_estimation/frame_id_img", frame_img);
     nh.getParam("/object_3d_estimation/frame_id_pcl", frame_pcl);
 
-    pub_cloud_XYZ =  nh.advertise<sensor_msgs::PointCloud2> ("points2", 1);
-
+    pub_cloud_XYZ = nh.advertise<sensor_msgs::PointCloud2> ("points2", 1);
+    pub_cloud_depth = nh.advertise<sensor_msgs::PointCloud2> ("points_depth", 1); 
+    pub_red_bb = nh.advertise<pm_assign2::bounding> ("closest_car", 1);
     message_filters::Subscriber<sensor_msgs::Image> left_image_sub(nh, "/stereo/left/image_rect_color", 1);
     message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub(nh, "/velodyne_points", 1);
 
