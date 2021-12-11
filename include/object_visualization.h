@@ -23,6 +23,3 @@
 cv::Mat left_image;
 
 tf::TransformListener *listener;
-
-pcl::PointCloud<pcl::PointXYZ>::Ptr pc(new pcl::PointCloud<pcl::PointXYZ>);
-
