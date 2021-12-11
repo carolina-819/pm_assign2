@@ -22,6 +22,7 @@
 
 cv::Mat left_image;
 cv::Mat depth_map;
+cv::Mat filtered_depth_map;
 
 std::string frame_img, frame_pcl;
 

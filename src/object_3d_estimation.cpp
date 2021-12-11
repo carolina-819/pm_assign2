@@ -36,70 +36,6 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
 ////    cv::imshow("Depth Map", depth_map);
 //    cv::waitKey(1);
 }
-
-pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, cv::Mat dm, bool publish){
-    
-    cv::Mat depth = dm.clone();
-    cv::Mat image = left_image.clone();
-    float z, y, x;
-
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-     depth.convertTo(depth, CV_32F);
-
-      if (!depth.data) {
-        std::cerr << "No depth data!!!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    /*if(image.rows != depth.rows || image.cols != depth.cols){
-        std::cerr << "Different sizes" << std::endl;
-        exit(EXIT_FAILURE);
-    }*/
-    pointcloud->header.frame_id = "vision_frame";
-    pointcloud->width = roi.width; //Dimensions must be initialized to use 2-D indexing 
-    pointcloud->height = roi.height;
-     for (int v = roi.y; v < (roi.y + roi.height); v ++)
-    {
-        for (int u = roi.x; u < (roi.x + roi.width); u ++)
-        {
-            if(v ){ //calculates only for points inside roi
-                float Z = depth.at<float>(v, u);
-
-                pcl::PointXYZRGB p;
-                p.z = Z;
-                p.x = ((u - left_camera.cx) * Z / left_camera.fx);
-                p.y = ((v - left_camera.cy) * Z / left_camera.fy);
-                p.r = image.at<cv::Vec3b>(v, u)[2];
-                p.g = image.at<cv::Vec3b>(v, u)[1];
-                p.b = image.at<cv::Vec3b>(v, u)[0];  
-
-
-                pointcloud->points.push_back(p);
-            }
-            
-
-        }
-    }
-    
-    //pcl::PointXYZ res(0,0,0);
-    pcl::CentroidPoint<pcl::PointXYZ> centroid;
-    pcl::PointXYZ aux;
-    size_t siz = pointcloud->size();
-    for(size_t i = 0; i < siz; i++){
-        aux.x = pointcloud->points[i].x;
-        aux.y = pointcloud->points[i].y;
-        aux.z = pointcloud->points[i].z;
-        centroid.add(aux);
-    }
-    pcl::PointXYZ c1;
-    centroid.get(c1);
-    
-    //converter para sensor_msgs
-    sensor_msgs::PointCloud2 cloud_msg;
-    pcl::toROSMsg(*pointcloud.get(),cloud_msg );
-
-    if(publish) pub_cloud_depth.publish(cloud_msg);
-    return c1;
-}
    
 
 void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointCloud2ConstPtr& pc_msg)
@@ -133,90 +69,7 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
     
 }
 
-std::vector<int> enlargeBBs(int x, int y, int w, int h)
-{
-    int x_new, y_new, w_new, h_new;
 
-    // Left, Up. Down -> 25% bigger
-    // Right -> 33% bigger
-    if(x-x/4 >= 0)
-    {
-        x_new = x- x/4;
-        w_new = w + x/4;
-
-        if(x_new + w_new+w/3 < cam_info.width) w_new += w/3;
-        else w_new = cam_info.width - x_new;
-    }
-    else
-    {
-        x_new = x;
-        w_new = w;
-    }
-
-    if(y-y/4 >= 0)
-    {
-        y_new = y - y/4;
-        h_new = h + y/4;
-
-        if(y_new + h_new+h/4 < cam_info.height) h_new += h/4;
-        else h_new = cam_info.height - y_new;
-    }
-    else
-    {
-        y_new = y;
-        h_new = h;
-    }
-
-    std::vector<int> new_points;
-    new_points.reserve(4);
-
-    new_points.push_back(x_new);
-    new_points.push_back(y_new);
-    new_points.push_back(w_new);
-    new_points.push_back(h_new);
-
-    return new_points;
-}
-
-void getClosestAndPublish(std::vector<cv::Rect> ROIs, cv::Mat depth_map_arg){
-int index = 0;
-    pcl::PointXYZ c, c_final;
-
-    if(ROIs.size() == 0) return;
-       
-       float min = 100;
-       
-        
-        for(int i=0; i < ROIs.size(); i++)
-        {
-            c = depthMapToPointcloud(ROIs[i], depth_map_arg, false);
-
-            if(c.z < min)
-            {
-                min = c.z;
-                index = i;
-                c_final = c;
-            }
-
-        }
-
-    
-
-    //send message with red bounding box and centroid position
-    pm_assign2::bounding redbb;
-    redbb.header.stamp = ros::Time::now();
-    redbb.xp = c_final.x;
-    redbb.yp = c_final.y;
-    redbb.zp = c_final.z;
-    redbb.x = ROIs[index].x;
-    redbb.y = ROIs[index].y;
-    redbb.width = ROIs[index].width;
-    redbb.height = ROIs[index].height;
-//    ROS_WARN_STREAM("mais pequeno " << index);
-
-    depthMapToPointcloud(ROIs[index], depth_map_arg, true);
-    pub_red_bb.publish(redbb);
-}
 std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car_BBs)
 {
 //    cv::Mat img_bb = left_image.clone();
@@ -225,10 +78,6 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
 
     std::vector<cv::Rect> car_ROIs;
     car_ROIs.reserve(n_cars);
-
-    std::vector<cv::Rect> car_ROIs_large;
-    car_ROIs_large.reserve(n_cars);
-
    
     int x, y, w, h;
 
@@ -276,21 +125,9 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
                 // Accept Only Bounding Boxes With Correct Dimensions
                 if(w > 0 && w < cam_info.width && h > 0 && h < cam_info.height)
                 {
-                    // Saves Original BBs
+                    // Saves BBs
                     car_ROIs.push_back(cv::Rect(x, y, w, h));
-                    ROS_WARN_STREAM("x="<<car_ROIs[i].x<<" y="<<car_ROIs[i].y<<" w="<<car_ROIs[i].width<<" h="<<car_ROIs[i].height);
-
-
-                    // Expand BBs (respecting limits)
-                    std::vector<int> new_points = enlargeBBs(x, y, w, h);
-                    x = new_points[0];
-                    y = new_points[1];
-                    w = new_points[2];
-                    h = new_points[3];
-
-                    // Save Enlarged BBs
-                    car_ROIs_large.push_back(cv::Rect(x, y, w, h));
-                    ROS_WARN_STREAM("x="<<car_ROIs_large[i].x<<" y="<<car_ROIs_large[i].y<<" w="<<car_ROIs_large[i].width<<" h="<<car_ROIs_large[i].height<<"\n");
+//                    ROS_WARN_STREAM("x="<<car_ROIs[i].x<<" y="<<car_ROIs[i].y<<" w="<<car_ROIs[i].width<<" h="<<car_ROIs[i].height);
 
 //                      ROS_WARN_STREAM("Probability=" << car_prob*100);
 //                      cv::rectangle(img_bb, car_ROIs[i], cv::Scalar(0, 255, 0), 1, 8, 0);
@@ -299,10 +136,101 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
         }
     }
 
-    
-    getClosestAndPublish(car_ROIs, depth_map);
+//    // Show chosen BBs
+//    cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
+//    cv::Mat segmented = cv::Mat::zeros(left_image.size(), left_image.type());
+//    for(int i=0; i<car_ROIs.size(); i++)
+//    {
+//        cv::rectangle(mask, car_ROIs[i], cv::Scalar(255, 255, 255),-1, 8, 0);
+//        left_image.copyTo(segmented, mask);
+//    }
+//    cv::imshow("segmented", segmented);
+//    cv::waitKey(1);
+
+    return car_ROIs;
+}
+
+
+std::vector<cv::Rect> enlargeBBs(std::vector<cv::Rect> car_ROIs)
+{
+    int n_cars = car_ROIs.size();
+
+    std::vector<cv::Rect> car_ROIs_large;
+    car_ROIs_large.reserve(n_cars);
+
+    for(int i=0; i<n_cars; i++)
+    {
+        int x = car_ROIs[i].x;
+        int y = car_ROIs[i].y;
+        int w = car_ROIs[i].width;
+        int h = car_ROIs[i].height;
+
+        int x_new, y_new, w_new, h_new;
+
+        // Left, Up. Down -> 25% bigger
+        // Right -> 33% bigger
+        if(x-x/4 >= 0)
+        {
+            x_new = x- x/4;
+            w_new = w + x/4;
+
+            if(x_new + w_new+w/3 < cam_info.width) w_new += w/3;
+            else w_new = cam_info.width - x_new;
+        }
+        else
+        {
+            x_new = x;
+            w_new = w;
+        }
+
+        if(y-y/4 >= 0)
+        {
+            y_new = y - y/4;
+            h_new = h + y/4;
+
+            if(y_new + h_new+h/4 < cam_info.height) h_new += h/4;
+            else h_new = cam_info.height - y_new;
+        }
+        else
+        {
+            y_new = y;
+            h_new = h;
+        }
+
+        // Save Enlarged BBs
+        car_ROIs_large.push_back(cv::Rect(x_new, y_new, w_new, h_new));
+//        ROS_WARN_STREAM("x="<<car_ROIs_large[i].x<<" y="<<car_ROIs_large[i].y<<" w="<<car_ROIs_large[i].width<<" h="<<car_ROIs_large[i].height<<"\n");
+    }
 
     return car_ROIs_large;
+}
+
+
+cv::Mat applyKMeans(cv::Mat img)
+{
+    const cv::Mat& source = img.clone();
+
+    const unsigned int singleLineSize = source.rows * source.cols;
+    const unsigned int K = 3;
+    cv::Mat data = source.reshape(1, singleLineSize);
+    data.convertTo(data, CV_32F);
+    std::vector<int> labels;
+    cv::Mat1f colors;
+
+    cv::kmeans(data, K, labels, cv::TermCriteria(cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 10, 1.), 2, cv::KMEANS_PP_CENTERS, colors);
+
+    for (unsigned int i = 0 ; i < singleLineSize ; i++ )
+    {
+        if(labels[i] != 2) data.at<float>(i) = 0;
+    }
+
+    cv::Mat outputImage = data.reshape(1, source.rows);
+//    outputImage.convertTo(outputImage, CV_8U);
+
+//    cv::imshow("K_Means", outputImage);
+//    cv::waitKey(1);
+
+    return outputImage;
 }
 
 
@@ -327,65 +255,169 @@ void highlight_depth_map(cv::Mat dp, cv::Rect BB)
 }
 
 
-cv::Mat applyKMeans(cv::Mat img)
-{
-    const cv::Mat& source = img.clone();
-
-    const unsigned int singleLineSize = source.rows * source.cols;
-    const unsigned int K = 3;
-    cv::Mat data = source.reshape(1, singleLineSize);
-    data.convertTo(data, CV_32F);
-    std::vector<int> labels;
-    cv::Mat1f colors;
-
-    cv::kmeans(data, K ,labels,cv::TermCriteria(cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 10, 1.), 2,cv::KMEANS_PP_CENTERS,colors);
-
-    for (unsigned int i = 0 ; i < singleLineSize ; i++ ){
-                data.at<float>(i, 0) = colors(labels[i], 0);
-    }
-
-    cv::Mat outputImage = data.reshape(1, source.rows);
-//    outputImage.convertTo(outputImage, CV_8U);
-
-//    cv::imshow("K_Means", outputImage);
-//    cv::waitKey(1);
-
-    return outputImage;
-}
-
-
-void getClosestCar(std::vector<cv::Rect> bbs)
+int getClosestCar(std::vector<cv::Rect> bbs)
 {
     cv::Mat dm = depth_map.clone();
 
-    double avg = 0, min_avg = 1000;
+    double nz_avg = 0, min_avg = 1000;
     int idx = 0;
 
-    for(int i = 0; i < bbs.size(); i++)
+    if(bbs.size() > 0)
     {
-        cv::Mat cropped_dp = dm(bbs[i]);
-
-        avg = cv::mean(cropped_dp)[0];
-//        ROS_WARN_STREAM("mean="<<avg);
-
-        if(avg < min_avg)
+        for(int i = 0; i < bbs.size(); i++)
         {
-            min_avg = avg;
-            idx = i;
+            cv::Mat cropped_dp = dm(bbs[i]);
+
+            double s = cv::sum(cropped_dp)[0];
+            int n_nz = cv::countNonZero(cropped_dp);
+
+            nz_avg = s / n_nz;
+            ROS_WARN_STREAM("non zero avg = "<<nz_avg);
+
+            if(nz_avg < min_avg)
+            {
+                min_avg = nz_avg;
+                idx = i;
+            }
         }
+
+        ROS_WARN_STREAM("min_avg="<<min_avg);
+
+//        // Show chosen BBs
+//        cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
+//        cv::Mat segmented = cv::Mat::zeros(left_image.size(), left_image.type());
+//        cv::rectangle(mask, bbs[idx], cv::Scalar(255, 255, 255),-1, 8, 0);
+//        left_image.copyTo(segmented, mask);
+//        cv::imshow("After mean based filtering", segmented);
+//        cv::waitKey(1);
+
+        // Segment Depth Map
+        cv::Mat mask_dm = cv::Mat::zeros(depth_map.size(), depth_map.type());
+        cv::Mat segmented_dm = cv::Mat::zeros(depth_map.size(), depth_map.type());
+        cv::rectangle(mask_dm, bbs[idx], cv::Scalar(255),-1, 8, 0);
+        depth_map.copyTo(segmented_dm, mask_dm);
+//        cv::Mat color_dm;
+//        applyColorMap(segmented_dm, color_dm, cv::COLORMAP_HOT);
+//        cv::imshow("Segment Depth Map", color_dm);
+//        cv::waitKey(1);
+
+        // Filter Outliars Too Far
+        cv::Mat filtered_dm;
+        double upper_t = 2*min_avg;
+        cv::threshold(segmented_dm, filtered_dm, upper_t, 255, cv::THRESH_TOZERO_INV); // Binarize image // 0: Binary, 1: Binary Inverted, 2: Truncate, 3: To Zero, 4: To Zero Inverted
+//        cv::Mat color_dm2;
+//        applyColorMap(filtered_dm, color_dm2, cv::COLORMAP_HOT);
+//        cv::imshow("Filtered Depth Map - Up", color_dm2);
+//        cv::waitKey(1);
+
+        // Filter Outliars Too Close
+        double lower_t = min_avg/4;
+        cv::threshold(filtered_dm, filtered_dm, lower_t, 255, cv::THRESH_TOZERO); // Binarize image // 0: Binary, 1: Binary Inverted, 2: Truncate, 3: To Zero, 4: To Zero Inverted
+//        cv::Mat color_dm3;
+//        applyColorMap(filtered_dm, color_dm3, cv::COLORMAP_HOT);
+//        cv::imshow("Filtered Depth Map - Up/Low", color_dm3);
+//        cv::waitKey(1);
+
+        filtered_depth_map = filtered_dm.clone();
     }
 
-//    ROS_WARN_STREAM("min_avg="<<min_avg);
-
-    // K_means
-    cv::Mat kmeans = applyKMeans(depth_map);
-
-    // Visualize Closest BB's Point Cloud With Color
-    highlight_depth_map(kmeans, bbs[idx]);
+    return idx;
 }
 
 
+pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, cv::Mat dm, bool publish)
+{
+    cv::Mat depth = dm.clone();
+    cv::Mat image = left_image.clone();
+    float z, y, x;
 
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    depth.convertTo(depth, CV_32F);
+
+    if (!depth.data)
+    {
+        std::cerr << "No depth data!!!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    /*if(image.rows != depth.rows || image.cols != depth.cols){
+        std::cerr << "Different sizes" << std::endl;
+        exit(EXIT_FAILURE);
+    }*/
+
+    pointcloud->header.frame_id = "vision_frame";
+    pointcloud->width = roi.width; //Dimensions must be initialized to use 2-D indexing
+    pointcloud->height = roi.height;
+
+    for (int v = roi.y; v < (roi.y + roi.height); v ++)
+    {
+        for (int u = roi.x; u < (roi.x + roi.width); u ++)
+        {
+            if(v ){ //calculates only for points inside roi
+                float Z = depth.at<float>(v, u);
+
+                pcl::PointXYZRGB p;
+                p.z = Z;
+                p.x = ((u - left_camera.cx) * Z / left_camera.fx);
+                p.y = ((v - left_camera.cy) * Z / left_camera.fy);
+                p.r = image.at<cv::Vec3b>(v, u)[2];
+                p.g = image.at<cv::Vec3b>(v, u)[1];
+                p.b = image.at<cv::Vec3b>(v, u)[0];
+
+
+                pointcloud->points.push_back(p);
+            }
+
+
+        }
+    }
+
+    //pcl::PointXYZ res(0,0,0);
+    pcl::CentroidPoint<pcl::PointXYZ> centroid;
+    pcl::PointXYZ aux;
+    size_t siz = pointcloud->size();
+
+    for(size_t i = 0; i < siz; i++)
+    {
+        aux.x = pointcloud->points[i].x;
+        aux.y = pointcloud->points[i].y;
+        aux.z = pointcloud->points[i].z;
+        centroid.add(aux);
+    }
+
+    pcl::PointXYZ c1;
+    centroid.get(c1);
+
+    //converter para sensor_msgs
+    sensor_msgs::PointCloud2 cloud_msg;
+    pcl::toROSMsg(*pointcloud.get(),cloud_msg );
+
+    if(publish) pub_cloud_depth.publish(cloud_msg);
+
+
+    return c1;
+}
+
+
+void getClosestAndPublish(cv::Rect BB, cv::Mat depth_map_arg)
+{
+    pcl::PointXYZ c = depthMapToPointcloud(BB, depth_map_arg, false);
+
+    //send message with red bounding box and centroid position
+    pm_assign2::bounding redbb;
+    redbb.header.stamp = ros::Time::now();
+    redbb.xp = c.x;
+    redbb.yp = c.y;
+    redbb.zp = c.z;
+    redbb.x = BB.x;
+    redbb.y = BB.y;
+    redbb.width = BB.width;
+    redbb.height = BB.height;
+//    ROS_WARN_STREAM("mais pequeno " << index);
+
+    depthMapToPointcloud(BB, depth_map_arg, true);
+    pub_red_bb.publish(redbb);
+}
 
 
 void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
@@ -401,14 +433,18 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
         }
     }
 
-    int n = car_BBs.bounding_boxes.size();
-
     // Filter Irrelevant Car Bounding Boxes
-    std::vector<cv::Rect> car_ROIs;
-    car_ROIs = FilterBoundingBoxesRGB(car_BBs);
+    std::vector<cv::Rect> car_ROIs = FilterBoundingBoxesRGB(car_BBs);
+
+    // Enlarge BBs for Depth Map Processing
+    std::vector<cv::Rect> car_ROIs_large = enlargeBBs(car_ROIs);
 
     // Get Closest Car From Depth Map
-    getClosestCar(car_ROIs);
+    int idx = getClosestCar(car_ROIs_large);
+
+    // Publish depth map -> pcl RGB
+    cv::Mat dm = filtered_depth_map.clone();
+    getClosestAndPublish(car_ROIs[idx], dm); // car_ROIs_large[idx]
 }
 
 

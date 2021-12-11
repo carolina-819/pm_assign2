@@ -25,7 +25,8 @@
 <rosparam param="frame_id_img">"vision_frame"</rosparam>
 <rosparam param="frame_id_pcl">"velodyne"</rosparam>
 </node>
- <node name="object_visualization" type="object_visualization" pkg="pm_assign2"/> 
+
+<node name="object_visualization" type="object_visualization" pkg="pm_assign2"/>
 
 <!-- Launch detector -->
 <include if="$(arg run_detector)" ns="dark2" file="$(find darknet_ros)/launch/darknet_ros.launch" >
