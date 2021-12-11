@@ -325,12 +325,12 @@ int getClosestCar(std::vector<cv::Rect> bbs)
 }
 
 
-pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, cv::Mat dm, bool publish)
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr depthMapToPointcloud(cv::Rect roi, cv::Mat dm)
 {
     cv::Mat depth = dm.clone();
 
-    cv::imshow("Filtered Depth Map - Up/Low", depth);
-    cv::waitKey(1);
+//    cv::imshow("Filtered Depth Map - Up/Low", depth);
+//    cv::waitKey(1);
 
     cv::Mat image = left_image.clone();
     float z, y, x;
@@ -357,7 +357,9 @@ pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, cv::Mat dm, bool publish)
     {
         for (int u = roi.x; u < (roi.x + roi.width); u ++)
         {
-            if(v ){ //calculates only for points inside roi
+            if(v )
+            {
+                //calculates only for points inside roi
                 float Z = depth.at<float>(v, u);
 
                 pcl::PointXYZRGB p;
@@ -371,14 +373,18 @@ pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, cv::Mat dm, bool publish)
 
                 pointcloud->points.push_back(p);
             }
-
-
         }
     }
 
-    //pcl::PointXYZ res(0,0,0);
+    return pointcloud;
+}
+
+
+pcl::PointXYZ calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud)
+{
     pcl::CentroidPoint<pcl::PointXYZ> centroid;
     pcl::PointXYZ aux;
+
     size_t siz = pointcloud->size();
 
     for(size_t i = 0; i < siz; i++)
@@ -389,23 +395,21 @@ pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, cv::Mat dm, bool publish)
         centroid.add(aux);
     }
 
-    pcl::PointXYZ c1;
-    centroid.get(c1);
+    pcl::PointXYZ c;
+    centroid.get(c);
 
     //converter para sensor_msgs
     sensor_msgs::PointCloud2 cloud_msg;
     pcl::toROSMsg(*pointcloud.get(),cloud_msg );
 
-    if(publish) pub_cloud_depth.publish(cloud_msg);
-
-
-    return c1;
+    return c;
 }
 
 
 void getClosestAndPublish(cv::Rect BB, cv::Mat depth_map_arg)
 {
-    pcl::PointXYZ c = depthMapToPointcloud(BB, depth_map_arg, false);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB, depth_map_arg);
+    pcl::PointXYZ c = calculateCentroid(pointcloud);
 
     //send message with red bounding box and centroid position
     pm_assign2::bounding redbb;
@@ -419,7 +423,12 @@ void getClosestAndPublish(cv::Rect BB, cv::Mat depth_map_arg)
     redbb.height = BB.height;
 //    ROS_WARN_STREAM("mais pequeno " << index);
 
-    depthMapToPointcloud(BB, depth_map_arg, true);
+    //converter para sensor_msgs
+    sensor_msgs::PointCloud2 cloud_msg;
+    pcl::toROSMsg(*pointcloud.get(), cloud_msg);
+
+    pub_cloud_depth.publish(cloud_msg);
+
     pub_red_bb.publish(redbb);
 }
 
