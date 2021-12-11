@@ -37,9 +37,9 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
 //    cv::waitKey(1);
 }
 
-pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, bool publish){
+pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, cv::Mat dm, bool publish){
     
-    cv::Mat depth = depth_map.clone();
+    cv::Mat depth = dm.clone();
     cv::Mat image = left_image.clone();
     float z, y, x;
 
@@ -101,8 +101,6 @@ pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, bool publish){
     return c1;
 }
    
-  
-
 
 void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointCloud2ConstPtr& pc_msg)
 {
@@ -180,6 +178,45 @@ std::vector<int> enlargeBBs(int x, int y, int w, int h)
     return new_points;
 }
 
+void getClosestAndPublish(std::vector<cv::Rect> ROIs, cv::Mat depth_map_arg){
+int index = 0;
+    pcl::PointXYZ c, c_final;
+
+    if(ROIs.size() == 0) return;
+       
+       float min = 100;
+       
+        
+        for(int i=0; i < ROIs.size(); i++)
+        {
+            c = depthMapToPointcloud(ROIs[i], depth_map_arg, false);
+
+            if(c.z < min)
+            {
+                min = c.z;
+                index = i;
+                c_final = c;
+            }
+
+        }
+
+    
+
+    //send message with red bounding box and centroid position
+    pm_assign2::bounding redbb;
+    redbb.header.stamp = ros::Time::now();
+    redbb.xp = c_final.x;
+    redbb.yp = c_final.y;
+    redbb.zp = c_final.z;
+    redbb.x = ROIs[index].x;
+    redbb.y = ROIs[index].y;
+    redbb.width = ROIs[index].width;
+    redbb.height = ROIs[index].height;
+//    ROS_WARN_STREAM("mais pequeno " << index);
+
+    depthMapToPointcloud(ROIs[index], depth_map_arg, true);
+    pub_red_bb.publish(redbb);
+}
 std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car_BBs)
 {
 //    cv::Mat img_bb = left_image.clone();
@@ -192,8 +229,7 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
     std::vector<cv::Rect> car_ROIs_large;
     car_ROIs_large.reserve(n_cars);
 
-    pcl::PointXYZ c, c_final;
-
+   
     int x, y, w, h;
 
 
@@ -263,55 +299,8 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
         }
     }
 
-    int index = 0;
-
-    if(car_ROIs.size() != 0)
-    {
-        //crop image and depth_map, send to calculate point cloud, get centroid
-
-//       cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
-//       cv::Mat segmented = cv::Mat::zeros(left_image.size(), left_image.type());
-       float min = 100;
-       
-        
-        for(int i=0; i < car_ROIs.size(); i++)
-        {
-            c = depthMapToPointcloud(car_ROIs[i], false);
-
-            if(c.z < min)
-            {
-                min = c.z;
-                index = i;
-                c_final = c;
-            }
-
-            //cv::rectangle(mask, car_ROIs[i], cv::Scalar(255,255,255),-1, 8, 0);
-        }
-
-        //left_image.copyTo(segmented, mask);
-
-      //  cv::imshow("Segmented", segmented);
-      //  cv::waitKey(1);
-    }
-
-//        cv::imshow("Left image w/ BBs", img_bb);
-//        cv::waitKey(1);
-
-    //send message with red bounding box and centroid position
-    pm_assign2::bounding redbb;
-    redbb.header.stamp = ros::Time::now();
-    redbb.xp = c_final.x;
-    redbb.yp = c_final.y;
-    redbb.zp = c_final.z;
-    redbb.x = car_ROIs[index].x;
-    redbb.y = car_ROIs[index].y;
-    redbb.width = car_ROIs[index].width;
-    redbb.height = car_ROIs[index].height;
-//    ROS_WARN_STREAM("mais pequeno " << index);
-
-    depthMapToPointcloud(car_ROIs[index], true);
-    pub_red_bb.publish(redbb);
-
+    
+    getClosestAndPublish(car_ROIs, depth_map);
 
     return car_ROIs_large;
 }
