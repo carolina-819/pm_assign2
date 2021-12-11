@@ -272,7 +272,7 @@ int getClosestCar(std::vector<cv::Rect> bbs)
             int n_nz = cv::countNonZero(cropped_dp);
 
             nz_avg = s / n_nz;
-            ROS_WARN_STREAM("non zero avg = "<<nz_avg);
+//            ROS_WARN_STREAM("non zero avg = "<<nz_avg);
 
             if(nz_avg < min_avg)
             {
@@ -281,7 +281,7 @@ int getClosestCar(std::vector<cv::Rect> bbs)
             }
         }
 
-        ROS_WARN_STREAM("min_avg="<<min_avg);
+//        ROS_WARN_STREAM("min_avg="<<min_avg);
 
 //        // Show chosen BBs
 //        cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
@@ -328,6 +328,10 @@ int getClosestCar(std::vector<cv::Rect> bbs)
 pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, cv::Mat dm, bool publish)
 {
     cv::Mat depth = dm.clone();
+
+    cv::imshow("Filtered Depth Map - Up/Low", depth);
+    cv::waitKey(1);
+
     cv::Mat image = left_image.clone();
     float z, y, x;
 
