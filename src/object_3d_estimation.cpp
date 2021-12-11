@@ -490,9 +490,6 @@ int main(int argc, char** argv) {
     nh.getParam("/object_3d_estimation/frame_id_img", frame_img);
     nh.getParam("/object_3d_estimation/frame_id_pcl", frame_pcl);
 
-    pub_cloud_XYZ = nh.advertise<sensor_msgs::PointCloud2> ("points2", 1);
-    pub_cloud_depth = nh.advertise<sensor_msgs::PointCloud2> ("points_depth", 1); 
-    pub_red_bb = nh.advertise<pm_assign2::bounding> ("closest_car", 1);
     message_filters::Subscriber<sensor_msgs::Image> left_image_sub(nh, "/stereo/left/image_rect_color", 1);
     message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub(nh, "/velodyne_points", 1);
 
@@ -500,10 +497,13 @@ int main(int argc, char** argv) {
     message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), left_image_sub, pc_sub);
     sync.registerCallback(boost::bind(&cbNewImage, _1, _2));
 
+    get_left_camera_info();
+
     ros::Subscriber bb_sub = nh.subscribe("/objects/left/bounding_boxes", 1, cbBoundingBoxes);
 
-
-    get_left_camera_info();
+    pub_cloud_XYZ = nh.advertise<sensor_msgs::PointCloud2> ("points2", 1);
+    pub_cloud_depth = nh.advertise<sensor_msgs::PointCloud2> ("points_depth", 1);
+    pub_red_bb = nh.advertise<pm_assign2::bounding> ("closest_car", 1);
 
 
     while(ros::ok())
