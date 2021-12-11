@@ -37,10 +37,10 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
     cv::waitKey(1);
 }
 
-void depthMapToPointcloud(cv::Mat xyz_img, cv::Mat rgb_img){
+pcl::PointXYZ depthMapToPointcloud(cv::Rect roi, bool publish){
     
-    cv::Mat depth = xyz_img.clone();
-    cv::Mat image = rgb_img.clone();
+    cv::Mat depth = depth_map.clone();
+    cv::Mat image = left_image.clone();
     float z, y, x;
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -50,38 +50,55 @@ void depthMapToPointcloud(cv::Mat xyz_img, cv::Mat rgb_img){
         std::cerr << "No depth data!!!" << std::endl;
         exit(EXIT_FAILURE);
     }
-    if(image.rows != depth.rows || image.cols != depth.cols){
+    /*if(image.rows != depth.rows || image.cols != depth.cols){
         std::cerr << "Different sizes" << std::endl;
         exit(EXIT_FAILURE);
-    }
+    }*/
     pointcloud->header.frame_id = "vision_frame";
-    pointcloud->width = depth.cols; //Dimensions must be initialized to use 2-D indexing 
-    pointcloud->height = depth.rows;
-     for (int v = 0; v < depth.rows; v ++)
+    pointcloud->width = roi.width; //Dimensions must be initialized to use 2-D indexing 
+    pointcloud->height = roi.height;
+     for (int v = roi.y; v < (roi.y + roi.height); v ++)
     {
-        for (int u = 0; u < depth.cols; u ++)
+        for (int u = roi.x; u < (roi.x + roi.width); u ++)
         {
-            float Z = depth.at<float>(v, u);
+            if(v ){ //calculates only for points inside roi
+                float Z = depth.at<float>(v, u);
 
-            pcl::PointXYZRGB p;
-            p.z = Z;
-            p.x = ((u - left_camera.cx) * Z / left_camera.fx);
-            p.y = ((v - left_camera.cy) * Z / left_camera.fy);
-            p.r = image.at<cv::Vec3b>(v, u)[2];
-            p.g = image.at<cv::Vec3b>(v, u)[1];
-            p.b = image.at<cv::Vec3b>(v, u)[0];  
+                pcl::PointXYZRGB p;
+                p.z = Z;
+                p.x = ((u - left_camera.cx) * Z / left_camera.fx);
+                p.y = ((v - left_camera.cy) * Z / left_camera.fy);
+                p.r = image.at<cv::Vec3b>(v, u)[2];
+                p.g = image.at<cv::Vec3b>(v, u)[1];
+                p.b = image.at<cv::Vec3b>(v, u)[0];  
 
 
-            pointcloud->points.push_back(p);
+                pointcloud->points.push_back(p);
+            }
+            
 
         }
     }
     
-    //pointcloud->width = pointcloud.size();
+    //pcl::PointXYZ res(0,0,0);
+    pcl::CentroidPoint<pcl::PointXYZ> centroid;
+    pcl::PointXYZ aux;
+    size_t siz = pointcloud->size();
+    for(size_t i = 0; i < siz; i++){
+        aux.x = pointcloud->points[i].x;
+        aux.y = pointcloud->points[i].y;
+        aux.z = pointcloud->points[i].z;
+        centroid.add(aux);
+    }
+    pcl::PointXYZ c1;
+    centroid.get(c1);
+    
     //converter para sensor_msgs
     sensor_msgs::PointCloud2 cloud_msg;
     pcl::toROSMsg(*pointcloud.get(),cloud_msg );
-     pub_cloud_depth.publish(cloud_msg);
+
+    if(publish) pub_cloud_depth.publish(cloud_msg);
+    return c1;
 }
    
   
@@ -115,7 +132,6 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
 
 
     PointCloudToDepthMap(pc);
-    depthMapToPointcloud(depth_map, left_image);
     
 }
 
@@ -169,6 +185,7 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
     int n_cars = car_BBs.bounding_boxes.size();
 
     std::vector<cv::Rect> car_ROIs;
+    pcl::PointXYZ c, c_final;
     car_ROIs.reserve(n_cars);
 
     int x, y, w, h;
@@ -236,36 +253,53 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
             }
         }
     }
-
+    int index = 0;
     if(car_ROIs.size() != 0)
     {
+        //crop image and depth_map, send to calculate point cloud, get centroid
+        
+        /*
         cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
         cv::Mat segmented = cv::Mat::zeros(left_image.size(), left_image.type());
-
-        for(int i=0; i< car_ROIs.size(); i++)
+*/      float min = 100;
+       
+        
+        for(int i=0; i < car_ROIs.size(); i++)
         {
-            cv::rectangle(mask, car_ROIs[i], cv::Scalar(255,255,255),-1, 8, 0);
+            cv::Mat og_img = left_image.clone(), og_cm = depth_map.clone();
+            cv::Mat img_cr = og_img(car_ROIs[i]);
+            cv::Mat dm_cr = og_cm(car_ROIs[i]);
+            c = depthMapToPointcloud(car_ROIs[i], false);
+            if(c.z < min){ min = c.z; index = i; c_final = c;}
+            //cv::rectangle(mask, car_ROIs[i], cv::Scalar(255,255,255),-1, 8, 0);
         }
 
-        left_image.copyTo(segmented, mask);
+        //left_image.copyTo(segmented, mask);
 
-        cv::imshow("Segmented", segmented);
-        cv::waitKey(1);
+      //  cv::imshow("Segmented", segmented);
+      //  cv::waitKey(1);
     }
 
 //        cv::imshow("Left image w/ BBs", img_bb);
 //        cv::waitKey(1);
+//send message with red bounding box and centroid position
     pm_assign2::bounding redbb;
     redbb.header.stamp = ros::Time::now();
-    redbb.xp = 0.0;
-    redbb.yp = 0.0;
-    redbb.zp = 0.0;
-    redbb.x = car_ROIs[0].x;
-    redbb.y = car_ROIs[0].y;
-    redbb.width = car_ROIs[0].width;
-    redbb.height = car_ROIs[0].height;
+    redbb.xp = c_final.x;
+    redbb.yp = c_final.y;
+    redbb.zp = c_final.z;
+    redbb.x = car_ROIs[index].x;
+    redbb.y = car_ROIs[index].y;
+    redbb.width = car_ROIs[index].width;
+    redbb.height = car_ROIs[index].height;
+    ROS_WARN_STREAM("mais pequeno " << index);
 
+    cv::Mat og_i = left_image.clone(), og_d= depth_map.clone();
+    cv::Mat icr = og_i(car_ROIs[index]);
+    cv::Mat dcr = og_d(car_ROIs[index]);
+    depthMapToPointcloud(car_ROIs[index], true);
     pub_red_bb.publish(redbb);
+
     return car_ROIs;
 }
 

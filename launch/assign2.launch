@@ -3,7 +3,7 @@
 <arg name="run_detector" default="true" />
 
 <!-- Bags name -->
-<arg name="path_bag" default="/home/percmap/catkin_ws/Bag/" />
+<arg name="path_bag" default="/home/carolina/catkin_ws/Bag/" />
 <arg name="file_bag" default="coastalloop_track" />
 
 <node ns="/stereo/left" name="image_proc_left" type="image_proc" pkg="image_proc"/>
@@ -25,7 +25,7 @@
 <rosparam param="frame_id_img">"vision_frame"</rosparam>
 <rosparam param="frame_id_pcl">"velodyne"</rosparam>
 </node>
-<node name="object_visualization" type="object_visualization" pkg="pm_assign2"/>
+ <node name="object_visualization" type="object_visualization" pkg="pm_assign2"/> 
 
 <!-- Launch detector -->
 <include if="$(arg run_detector)" ns="dark2" file="$(find darknet_ros)/launch/darknet_ros.launch" >

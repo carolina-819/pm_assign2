@@ -18,6 +18,7 @@
 #include "pm_assign2/bounding.h"
 #include "darknet_ros_msgs/BoundingBox.h"
 #include <darknet_ros_msgs/BoundingBoxes.h>
+#include <pcl/common/centroid.h>
 
 cv::Mat left_image;
 cv::Mat depth_map;
