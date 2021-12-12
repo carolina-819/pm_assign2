@@ -44,7 +44,6 @@ void cbClosest(const pm_assign2::boundingConstPtr& msg)
     cv::putText(left_image, "X:" + std::to_string(cx) + " Y:" + std::to_string(cy) + " Z:" +std::to_string(cz), cv::Point(msg->x, msg->y), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
     cv::imshow("Left image", left_image);
     cv::waitKey(1);
-
 }
 
 
