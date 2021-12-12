@@ -94,7 +94,6 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
         }
         
     }
-}
 
 
 void cbClosest(const pm_assign2::boundingConstPtr& msg)
@@ -121,8 +120,21 @@ void cbClosest(const pm_assign2::boundingConstPtr& msg)
     cz=transformed_centroid.point.z;
 }
 
-void cbDepth(const sensor_msgs::PointCloud2ConstPtr& pc_msg)
+void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
 {
+    bbs_dn = *msg_BBs;
+    
+}
+
+
+void cbClosest(const pm_assign2::boundingConstPtr& msg)
+{
+    bbs_pm = *msg;
+        
+   
+}
+
+void cbDepth(const sensor_msgs::PointCloud2ConstPtr& pc_msg){
   /*  pcl::PCLPointCloud2 pcl_pc2;
     pcl::PointCloud<pcl::PointXYZ> pc;
     pcl_conversions::toPCL(pc_msg, pcl_pc2);
@@ -155,6 +167,7 @@ int main(int argc, char** argv) {
     ros::Subscriber bb_sub = nh.subscribe("/objects/left/bounding_boxes", 1, cbBoundingBoxes);
 
     ros::Subscriber msg_sub = nh.subscribe("closest_car", 1, cbClosest);
+    ros::Subscriber left_image_sub = nh.subscribe("l_image", 1, cbNewImage);
 
     ros::Subscriber left_image_sub = nh.subscribe("/stereo/left/image_rect_color", 1, cbNewImage);
 

@@ -41,7 +41,7 @@ void PointCloudToDepthMap(pcl::PointCloud<pcl::PointXYZ>::Ptr)
 void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointCloud2ConstPtr& pc_msg)
 {
 //    ROS_WARN_STREAM("Entered Callback!");
-
+   
     // Convert ros msg to opencv image
     cv_bridge::CvImageConstPtr cv_data;
     cv_data = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -64,9 +64,9 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
 
 //    ROS_WARN_STREAM("PCL -> Width = " << pc->width << " Height = " << pc->height);
 
-
+     
     PointCloudToDepthMap(pc);
-    
+    pub_image.publish(msg);
 }
 
 
@@ -253,7 +253,7 @@ void highlight_depth_map(cv::Mat dp, cv::Rect BB)
 
     cv::rectangle(color_dm, BB, cv::Scalar(0, 255, 0), 1, 8, 0);
 
-    cv::imshow("Colored Depth Map", color_dm);
+    //cv::imshow("Colored Depth Map", color_dm);
     cv::waitKey(1);
 }
 
@@ -520,7 +520,8 @@ void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
     redbb.car_w = dimensions[0];
     redbb.car_h = dimensions[1];
 //    ROS_WARN_STREAM("mais pequeno " << index);
-
+    sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", left_image).toImageMsg();
+    pub_image.publish(msg);
     pub_red_bb.publish(redbb);
 }
 
@@ -678,7 +679,7 @@ int main(int argc, char** argv) {
     pub_cloud_depth = nh.advertise<sensor_msgs::PointCloud2> ("points_depth", 1);
     pub_cloud_val = nh.advertise<sensor_msgs::PointCloud2> ("points_val", 1);
     pub_red_bb = nh.advertise<pm_assign2::bounding> ("closest_car", 1);
-
+    pub_image = nh.advertise<sensor_msgs::Image> ("l_image", 1);
     pub_Pose = nh.advertise<geometry_msgs::Pose> ("pose_rp", 1);
 
 

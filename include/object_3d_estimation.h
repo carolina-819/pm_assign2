@@ -43,7 +43,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr pc(new pcl::PointCloud<pcl::PointXYZ>);
 
 sensor_msgs::PointCloud2 cloud_framed, msg_cloud_xyz;
 
-ros::Publisher pub_cloud_XYZ, pub_cloud_depth, pub_red_bb, pub_cloud_val;
+ros::Publisher pub_cloud_XYZ, pub_cloud_depth, pub_red_bb, pub_cloud_val, pub_image;
 
 tf::TransformListener *listener;
 
