@@ -441,16 +441,7 @@ void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB_large, depth_map_arg);
         pcl::PointXYZ c = calculateCentroid(pointcloud);
 
-        //send message with red bounding box and centroid position
-        pm_assign2::bounding redbb;
-        redbb.header.stamp = ros::Time::now();
-        redbb.xp = c.x;
-        redbb.yp = c.y;
-        redbb.zp = c.z;
-        redbb.x = BB.x;
-        redbb.y = BB.y;
-        redbb.width = BB.width;
-        redbb.height = BB.height;
+        
     //    ROS_WARN_STREAM("mais pequeno " << index);
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud_ = depthMapToPointcloud(BB, depth_map);
         //converter para sensor_msgs
@@ -569,7 +560,7 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
     // Publish depth map -> pcl RGB
     cv::Mat dm = filtered_depth_map.clone();
     getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], dm);
-    PublishPCL_val();
+   // PublishPCL_val();
     }else{
         ROS_WARN_STREAM("no car detected!");
     }
