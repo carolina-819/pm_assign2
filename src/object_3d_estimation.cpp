@@ -428,13 +428,13 @@ std::vector<double> getWidthandHeight(pcl::PointCloud<pcl::PointXYZRGB>::Ptr poi
 
     std::sort(points_y.begin(), points_y.end());
     height = points_y.back() - points_y.front();
-    ROS_WARN_STREAM("height="<<height);
+//    ROS_WARN_STREAM("height="<<height);
 
 
     // Width
     double sum = std::accumulate(points_z.begin(), points_z.end(), 0.0);
     double mean = sum / points_z.size();
-    ROS_WARN_STREAM("mean="<<mean);
+//    ROS_WARN_STREAM("mean="<<mean);
 
     for(int i=0; i<pointcloud->points.size(); i++)
     {
@@ -446,7 +446,8 @@ std::vector<double> getWidthandHeight(pcl::PointCloud<pcl::PointXYZRGB>::Ptr poi
 
     std::sort(points_x.begin(), points_x.end());
     width = points_x.back() - points_x.front();
-    ROS_WARN_STREAM("width="<<width);
+    width = width / 2;
+//    ROS_WARN_STREAM("width="<<width);
 
     std::vector<double> dimensions = {width, height};
 
