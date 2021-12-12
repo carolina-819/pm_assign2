@@ -9,12 +9,15 @@
 <!--<arg name="file_bag" default="coastalloop_tracking2" />-->
 <!--<arg name="file_bag" default="coastalloop_carbreak" />-->
 
+<!--Our Recorded Bag-->
+<!--<arg name="file_bag" default="track" />-->
+
 <node ns="/stereo/left" name="image_proc_left" type="image_proc" pkg="image_proc"/>
 <node ns="/stereo/right" name="image_proc_right" type="image_proc" pkg="image_proc"/>
 
 <!-- Change the rate if needed:  -->
 <param name="use_sim_time" value="true"/>
-<node pkg="rosbag" type="play" name="player" args="--clock -r 0.3 -l $(arg path_bag)$(arg file_bag).bag"/>
+<node pkg="rosbag" type="play" name="player" args="--clock -r 0.1 -l $(arg path_bag)$(arg file_bag).bag"/>
 
 <!-- Just to uncompress images-->
 <node name="republish_left"  type="republish" pkg="image_transport" args="compressed in:=/stereo/left/image_raw raw out:=/stereo/left/image_raw" />

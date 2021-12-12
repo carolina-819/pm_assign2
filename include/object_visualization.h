@@ -18,8 +18,23 @@
 #include "pm_assign2/bounding.h"
 #include "darknet_ros_msgs/BoundingBox.h"
 #include <darknet_ros_msgs/BoundingBoxes.h>
+#include <message_filters/time_synchronizer.h>
 
 
-cv::Mat left_image, depth_mat_cut;
+cv::Mat depth_mat_cut;
 
 tf::TransformListener *listener;
+
+int x, y, w, h;
+
+int msg_x, msg_y;
+
+std::vector<cv::Rect> BBs;
+cv::Rect bb;
+
+geometry_msgs::PointStamped centroid;
+geometry_msgs::PointStamped transformed_centroid;
+
+float width, height;
+
+float cx, cy, cz;
