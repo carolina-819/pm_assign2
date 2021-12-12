@@ -465,11 +465,11 @@ void publishPose(pcl::PointXYZ c)
     double hipo_z = sqrt(pow(z,2)+pow(hipo_xy,2));
 
     // Calculate Roll (X)
-    double gamma = acos (z/hipo_z) * 180.0 / PI;
+    double gamma = atan2 (-y, (z + 1E-5)) * 180.0 / PI;
 //    double Rroll[3][3] = {{1, 0, 0}, {0, cos(gamma), -sin(gamma)}, {0, sin(gamma), cos(gamma)}};
 
     // Calculate Pitch (Y)
-    double beta = atan2 (y,x) * 180.0 / PI;
+    double beta = atan2 (x,(z + 1E-5)) * 180.0 / PI;
 //    double Rpitch[3][3] = {{cos(beta), 0, sin(beta)}, {0, 1, 0}, {-sin(beta), 0, cos(beta)}};
 
 
