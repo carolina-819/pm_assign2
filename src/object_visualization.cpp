@@ -57,8 +57,8 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& img_msg)
         cv::putText(left_image, "Y:" + std::to_string(cy), cv::Point(msg_x, msg_y-20), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
         cv::putText(left_image, "Z:" +std::to_string(cz), cv::Point(msg_x, msg_y), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
 
-        cv::putText(left_image, "width: " +std::to_string(w), cv::Point(msg_x, msg_y-80), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
-        cv::putText(left_image, "height: " +std::to_string(h), cv::Point(msg_x, msg_y-60), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
+        cv::putText(left_image, "width: " +std::to_string(width), cv::Point(msg_x, msg_y-80), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
+        cv::putText(left_image, "height: " +std::to_string(height), cv::Point(msg_x, msg_y-60), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
     }
 
     else
@@ -68,8 +68,8 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& img_msg)
         cv::putText(left_image, "Y:" + std::to_string(cy), cv::Point(msg_x, msg_y-20), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
         cv::putText(left_image, "Z:" +std::to_string(cz), cv::Point(msg_x, msg_y), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
 
-        cv::putText(left_image, "width: " +std::to_string(w), cv::Point(msg_x, msg_y-80), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
-        cv::putText(left_image, "height: " +std::to_string(h), cv::Point(msg_x, msg_y-60), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
+        cv::putText(left_image, "width: " +std::to_string(width), cv::Point(msg_x, msg_y-80), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
+        cv::putText(left_image, "height: " +std::to_string(height), cv::Point(msg_x, msg_y-60), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
     }
 
     cv::imshow("Left image", left_image);
