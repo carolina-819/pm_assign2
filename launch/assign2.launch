@@ -5,8 +5,8 @@
 <!-- Bags name -->
 <arg name="path_bag" default="/home/percmap/catkin_ws/Bag/" />
 
-<!--<arg name="file_bag" default="coastalloop_track" />-->
-<arg name="file_bag" default="coastalloop_tracking2" />
+<arg name="file_bag" default="coastalloop_track" />
+<!--<arg name="file_bag" default="coastalloop_tracking2" />-->
 <!--<arg name="file_bag" default="coastalloop_carbreak" />-->
 
 <node ns="/stereo/left" name="image_proc_left" type="image_proc" pkg="image_proc"/>

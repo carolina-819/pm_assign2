@@ -354,50 +354,6 @@ pcl::PointXYZ calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointclou
     return c;
 }
 
-void getWidthandHeight(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud){
-  /*  pcl::PointXYZ center = calculateCentroid(pointcloud);
-    float width=10000, height;
-    std::vector<float> pointsz, pointsy;
-    pointsz.reserve(pointcloud->points.size());
-    pointsy.reserve(pointcloud->points.size());
-    for(int i=0; i<pointcloud->points.size(); i++){
-        pointsz[i]=pointcloud->points[i].z;
-        pointsy[i]=pointcloud->points[i].y;
-    }
-    std::sort(pointsz.begin(), pointsz.end());
-    std::sort(pointsy.begin(), pointsy.end());
-    bool h = false, w = false;
-
-    while(!h || pointsy.size()>3){
-        height = pointsy.back() - pointsy.front();
-        if(abs(center.y - ((pointsy.back()+pointsy.front())/2))<=0.5){
-            h = true;
-        }
-        else{
-            pointsy.erase(pointsy.begin());
-            pointsy.pop_back();
-        }
-    }
-    while(!w || pointsz.size()>3){
-        width = pointsz.back() - pointsz.front();
-        if(width <= 2*height){
-            if(abs(center.z - ((pointsz.back()+pointsz.front())/2))<=0.5){
-                w = true;
-            }else{
-                pointsz.erase(pointsz.begin());
-                pointsz.pop_back();
-            }
-        }else{
-            pointsz.erase(pointsz.begin());
-            pointsz.pop_back();
-        }
-    }
-    
-    ROS_WARN_STREAM("w: " << width << "h: " << height);*/
-    return;
-
-}
-
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr depthMapToPointcloud(cv::Rect roi, cv::Mat dm)
 {
@@ -452,7 +408,50 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr depthMapToPointcloud(cv::Rect roi, cv::Ma
 }
 
 
+std::vector<double> getWidthandHeight(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud)
+{
+    double width, height;
 
+    std::vector<double> points_x, points_y, points_z;
+
+    ROS_WARN_STREAM("pcl size = "<<pointcloud->points.size());
+
+    // Height
+    for(int i=0; i<pointcloud->points.size(); i++)
+    {
+        if(pointcloud->points[i].z > 0)
+        {
+            points_y.push_back(pointcloud->points[i].y);
+            points_z.push_back(pointcloud->points[i].z);
+        }
+    }
+
+    std::sort(points_y.begin(), points_y.end());
+    height = points_y.back() - points_y.front();
+    ROS_WARN_STREAM("height="<<height);
+
+
+    // Width
+    double sum = std::accumulate(points_z.begin(), points_z.end(), 0.0);
+    double mean = sum / points_z.size();
+    ROS_WARN_STREAM("mean="<<mean);
+
+    for(int i=0; i<pointcloud->points.size(); i++)
+    {
+        if(pointcloud->points[i].z < mean  && pointcloud->points[i].z > 0)
+        {
+            points_x.push_back(pointcloud->points[i].x);
+        }
+    }
+
+    std::sort(points_x.begin(), points_x.end());
+    width = points_x.back() - points_x.front();
+    ROS_WARN_STREAM("width="<<width);
+
+    std::vector<double> dimensions = {width, height};
+
+    return dimensions;
+}
 
 
 void publishPose(pcl::PointXYZ c)
@@ -491,17 +490,19 @@ void publishPose(pcl::PointXYZ c)
 
 void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
 {
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB_large, depth_map_arg);
-        pcl::PointXYZ c = calculateCentroid(pointcloud);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB_large, depth_map_arg);
+    pcl::PointXYZ c = calculateCentroid(pointcloud);
 
-        
-    //    ROS_WARN_STREAM("mais pequeno " << index);
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud_ = depthMapToPointcloud(BB, depth_map);
-        //converter para sensor_msgs
-        sensor_msgs::PointCloud2 cloud_msg;
-        pcl::toROSMsg(*pointcloud_.get(), cloud_msg);
-        pub_cloud_depth.publish(cloud_msg);
-        getWidthandHeight(pointcloud_);
+
+//    ROS_WARN_STREAM("mais pequeno " << index);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud_ = depthMapToPointcloud(BB, depth_map);
+
+    //converter para sensor_msgs
+    sensor_msgs::PointCloud2 cloud_msg;
+    pcl::toROSMsg(*pointcloud_.get(), cloud_msg);
+    pub_cloud_depth.publish(cloud_msg);
+
+    std::vector<double> dimensions = getWidthandHeight(pointcloud);
 
     publishPose(c);
 
@@ -518,8 +519,6 @@ void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
 //    ROS_WARN_STREAM("mais pequeno " << index);
 
     pub_red_bb.publish(redbb);
-   
-    
 }
 
 void PublishPCL_val(){
