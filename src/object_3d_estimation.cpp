@@ -95,14 +95,15 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
     }
 
     // Filter outliars
-    double max = *max_element(sizes.begin(), sizes.end());
+//    double max = *max_element(sizes.begin(), sizes.end());
     double min = *min_element(sizes.begin(), sizes.end());
-    double middle = (max + min)/ 2;
-//    ROS_WARN_STREAM("Middle=" << middle);
+//    double middle = (max + min)/ 2;
+////    ROS_WARN_STREAM("Middle=" << middle);
+//    double mid_middle = (middle + min) / 2; // To filter very small BBs // Filters 1/2 of the gap between middle and min
 
-    double mid_middle = (middle + min) / 2; // To filter very small BBs // Filters 1/2 of the gap between middle and min
-//    mid_middle = (mid_middle + min) / 2 * 1.25;
-
+    double sum = std::accumulate(sizes.begin(), sizes.end(), 0.0);
+    double mean = sum / sizes.size();
+    double mid_mean = (mean + min) / 2; // To filter very small BBs // Filters first half of the gap between avg and min
 
     // Get Bounding Boxes
     for (int i = 0; i < n_cars; i++)
@@ -116,7 +117,7 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
 //        ROS_WARN_STREAM("Size=" << BB_size);
 
         // Filter Bounding Boxes
-        if(BB_size >= mid_middle && h < w*1.5)
+        if(BB_size >= mid_mean && h < w*1.5)
         {
             double car_prob = car_BBs.bounding_boxes[i].probability;
 
