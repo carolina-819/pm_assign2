@@ -167,12 +167,12 @@ std::vector<cv::Rect> enlargeBBs(std::vector<cv::Rect> car_ROIs)
 
         int x_new, y_new, w_new, h_new;
 
-        // Left, Up. Down -> 25% bigger
+        // Left, Up. Down -> 20% bigger
         // Right -> 33% bigger
-        if(x-x/4 >= 0)
+        if(x-x/5 >= 0)
         {
-            x_new = x- x/4;
-            w_new = w + x/4;
+            x_new = x- x/5;
+            w_new = w + x/5;
 
             if(x_new + w_new+w/3 < cam_info.width) w_new += w/3;
             else w_new = cam_info.width - x_new;
@@ -183,12 +183,12 @@ std::vector<cv::Rect> enlargeBBs(std::vector<cv::Rect> car_ROIs)
             w_new = w;
         }
 
-        if(y-y/4 >= 0)
+        if(y-y/5 >= 0)
         {
-            y_new = y - y/4;
-            h_new = h + y/4;
+            y_new = y - y/5;
+            h_new = h + y/5;
 
-            if(y_new + h_new+h/4 < cam_info.height) h_new += h/4;
+            if(y_new + h_new+h/5 < cam_info.height) h_new += h/5;
             else h_new = cam_info.height - y_new;
         }
         else
@@ -303,7 +303,7 @@ int getClosestCar(std::vector<cv::Rect> bbs)
 
         // Filter Outliars Too Far
         cv::Mat filtered_dm;
-        double upper_t = 3*min_avg;
+        double upper_t = 1.5*min_avg;
         cv::threshold(segmented_dm, filtered_dm, upper_t, 255, cv::THRESH_TOZERO_INV); // Binarize image // 0: Binary, 1: Binary Inverted, 2: Truncate, 3: To Zero, 4: To Zero Inverted
 //        cv::Mat color_dm2;
 //        applyColorMap(filtered_dm, color_dm2, cv::COLORMAP_HOT);
@@ -320,7 +320,7 @@ int getClosestCar(std::vector<cv::Rect> bbs)
 
         filtered_depth_map = filtered_dm.clone();
 
-        ROS_WARN_STREAM("avg="<<min_avg<<" low="<<lower_t<<" upper="<<upper_t<<"\n");
+        ROS_WARN_STREAM("low="<<lower_t<<" avg="<<min_avg<<" upper="<<upper_t<<"\n");
     }
 
     return idx;
