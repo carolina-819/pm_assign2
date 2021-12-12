@@ -37,6 +37,7 @@ int x, y, w, h;
 }
 
 */
+
 void cbNewImage(const sensor_msgs::ImageConstPtr& img_msg)
 {
     cv_bridge::CvImageConstPtr cv_data;
@@ -61,7 +62,7 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
 
 void cbClosest(const pm_assign2::boundingConstPtr& msg)
 {
-    cv::Rect bb = cv::Rect(msg->x-1, msg->y-1, msg->width+1, msg->height+1);
+    cv::Rect bb = cv::Rect(msg->x, msg->y, msg->width, msg->height);
     
     // Transform centroid to "base_link"
     geometry_msgs::PointStamped centroid;
@@ -76,20 +77,30 @@ void cbClosest(const pm_assign2::boundingConstPtr& msg)
 
     float cx=transformed_centroid.point.x, cy=transformed_centroid.point.y, cz=transformed_centroid.point.z;
 
-    if(cx < 10 && (cy < 5 || cy > -5)){
+
+    // Warning Sign
+    if(cx < 10 && cy < 5 && cy > -5)
+    {
         cv::rectangle(left_image, bb, cv::Scalar(0, 0, 255), 1, 8, 0);
-    }else{
-        cv::rectangle(left_image, bb, cv::Scalar(0, 255, 0), 1, 8, 0);
+        cv::putText(left_image, "X:" + std::to_string(cx), cv::Point(msg->x, msg->y-40), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
+        cv::putText(left_image, "Y:" + std::to_string(cy), cv::Point(msg->x, msg->y-20), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
+        cv::putText(left_image, "Z:" +std::to_string(cz), cv::Point(msg->x, msg->y), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
     }
-   
 
+    else
+    {
+//        cv::rectangle(left_image, bb, cv::Scalar(0, 255, 0), 1, 8, 0);
+        cv::putText(left_image, "X:" + std::to_string(cx), cv::Point(msg->x, msg->y-40), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
+        cv::putText(left_image, "Y:" + std::to_string(cy), cv::Point(msg->x, msg->y-20), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
+        cv::putText(left_image, "Z:" +std::to_string(cz), cv::Point(msg->x, msg->y), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
+    }
 
-    cv::putText(left_image, "X:" + std::to_string(cx) + " Y:" + std::to_string(cy) + " Z:" +std::to_string(cz), cv::Point(msg->x, msg->y), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
     cv::imshow("Left image", left_image);
     cv::waitKey(1);
 }
 
-void cbDepth(const sensor_msgs::PointCloud2ConstPtr& pc_msg){
+void cbDepth(const sensor_msgs::PointCloud2ConstPtr& pc_msg)
+{
   /*  pcl::PCLPointCloud2 pcl_pc2;
     pcl::PointCloud<pcl::PointXYZ> pc;
     pcl_conversions::toPCL(pc_msg, pcl_pc2);
@@ -108,6 +119,8 @@ void cbDepth(const sensor_msgs::PointCloud2ConstPtr& pc_msg){
    // cv::bitwise_or(prev , heat, left_image[x:(x+w), y:(y+h), :]);
 
 }
+
+
 int main(int argc, char** argv) {
 
     ros::init(argc, argv, "object_visualization");

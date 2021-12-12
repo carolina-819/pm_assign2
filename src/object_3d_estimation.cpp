@@ -545,26 +545,23 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
     // Filter Irrelevant Car Bounding Boxes
     std::vector<cv::Rect> car_ROIs = FilterBoundingBoxesRGB(car_BBs);
     
-
-    ROS_WARN_STREAM("ENLARGING ");
     // Enlarge BBs for Depth Map Processing
     std::vector<cv::Rect> car_ROIs_large;
-    if(car_ROIs.size() > 0){
+    if(car_ROIs.size() > 0)
+    {
         car_ROIs_large = enlargeBBs(car_ROIs);
 
-     ROS_WARN_STREAM("closest car");
-    // Get Closest Car From Depth Map
-    int idx = getClosestCar(car_ROIs_large);
+//        ROS_WARN_STREAM("closest car");
+        // Get Closest Car From Depth Map
+        int idx = getClosestCar(car_ROIs_large);
 
-   
-    // Publish depth map -> pcl RGB
-    cv::Mat dm = filtered_depth_map.clone();
-    getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], dm);
-   // PublishPCL_val();
-    }else{
-        ROS_WARN_STREAM("no car detected!");
+
+        // Publish depth map -> pcl RGB
+        cv::Mat dm = filtered_depth_map.clone();
+        getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], dm);
+        // PublishPCL_val();
     }
-
+    else ROS_WARN_STREAM("no car detected!");
 }
 
 
