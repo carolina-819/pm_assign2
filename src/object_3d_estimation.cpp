@@ -329,6 +329,73 @@ int getClosestCar(std::vector<cv::Rect> bbs)
     return idx;
 }
 
+pcl::PointXYZ calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud)
+{
+    pcl::CentroidPoint<pcl::PointXYZ> centroid;
+    pcl::PointXYZ aux;
+
+    size_t siz = pointcloud->size();
+
+    for(size_t i = 0; i < siz; i++)
+    {
+        aux.x = pointcloud->points[i].x;
+        aux.y = pointcloud->points[i].y;
+        aux.z = pointcloud->points[i].z;
+
+        if(aux.z > 0) centroid.add(aux);
+    }
+
+    pcl::PointXYZ c;
+    centroid.get(c);
+
+
+    return c;
+}
+
+void getWidthandHeight(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud){
+  /*  pcl::PointXYZ center = calculateCentroid(pointcloud);
+    float width=10000, height;
+    std::vector<float> pointsz, pointsy;
+    pointsz.reserve(pointcloud->points.size());
+    pointsy.reserve(pointcloud->points.size());
+    for(int i=0; i<pointcloud->points.size(); i++){
+        pointsz[i]=pointcloud->points[i].z;
+        pointsy[i]=pointcloud->points[i].y;
+    }
+    std::sort(pointsz.begin(), pointsz.end());
+    std::sort(pointsy.begin(), pointsy.end());
+    bool h = false, w = false;
+
+    while(!h || pointsy.size()>3){
+        height = pointsy.back() - pointsy.front();
+        if(abs(center.y - ((pointsy.back()+pointsy.front())/2))<=0.5){
+            h = true;
+        }
+        else{
+            pointsy.erase(pointsy.begin());
+            pointsy.pop_back();
+        }
+    }
+    while(!w || pointsz.size()>3){
+        width = pointsz.back() - pointsz.front();
+        if(width <= 2*height){
+            if(abs(center.z - ((pointsz.back()+pointsz.front())/2))<=0.5){
+                w = true;
+            }else{
+                pointsz.erase(pointsz.begin());
+                pointsz.pop_back();
+            }
+        }else{
+            pointsz.erase(pointsz.begin());
+            pointsz.pop_back();
+        }
+    }
+    
+    ROS_WARN_STREAM("w: " << width << "h: " << height);*/
+    return;
+
+}
+
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr depthMapToPointcloud(cv::Rect roi, cv::Mat dm)
 {
@@ -383,28 +450,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr depthMapToPointcloud(cv::Rect roi, cv::Ma
 }
 
 
-pcl::PointXYZ calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud)
-{
-    pcl::CentroidPoint<pcl::PointXYZ> centroid;
-    pcl::PointXYZ aux;
 
-    size_t siz = pointcloud->size();
-
-    for(size_t i = 0; i < siz; i++)
-    {
-        aux.x = pointcloud->points[i].x;
-        aux.y = pointcloud->points[i].y;
-        aux.z = pointcloud->points[i].z;
-
-        if(aux.z > 0) centroid.add(aux);
-    }
-
-    pcl::PointXYZ c;
-    centroid.get(c);
-
-
-    return c;
-}
 
 
 void publishPose(pcl::PointXYZ c)
@@ -453,6 +499,7 @@ void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
         sensor_msgs::PointCloud2 cloud_msg;
         pcl::toROSMsg(*pointcloud_.get(), cloud_msg);
         pub_cloud_depth.publish(cloud_msg);
+        getWidthandHeight(pointcloud_);
 
     publishPose(c);
 
