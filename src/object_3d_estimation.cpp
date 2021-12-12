@@ -403,32 +403,41 @@ pcl::PointXYZ calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointclou
 }
 
 
-void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
+void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg, int val)
 {
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB, depth_map_arg); // Use Normal
-//    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB_large, depth_map_arg); // Use Large
+    if(val == 0){
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB_large, depth_map_arg);
+        pcl::PointXYZ c = calculateCentroid(pointcloud);
 
-    pcl::PointXYZ c = calculateCentroid(pointcloud);
+        //send message with red bounding box and centroid position
+        pm_assign2::bounding redbb;
+        redbb.header.stamp = ros::Time::now();
+        redbb.xp = c.x;
+        redbb.yp = c.y;
+        redbb.zp = c.z;
+        redbb.x = BB.x;
+        redbb.y = BB.y;
+        redbb.width = BB.width;
+        redbb.height = BB.height;
+    //    ROS_WARN_STREAM("mais pequeno " << index);
 
-    //send message with red bounding box and centroid position
-    pm_assign2::bounding redbb;
-    redbb.header.stamp = ros::Time::now();
-    redbb.xp = c.x;
-    redbb.yp = c.y;
-    redbb.zp = c.z;
-    redbb.x = BB.x;
-    redbb.y = BB.y;
-    redbb.width = BB.width;
-    redbb.height = BB.height;
-//    ROS_WARN_STREAM("mais pequeno " << index);
+        //converter para sensor_msgs
+        sensor_msgs::PointCloud2 cloud_msg;
+        pcl::toROSMsg(*pointcloud.get(), cloud_msg);
 
-    //converter para sensor_msgs
-    sensor_msgs::PointCloud2 cloud_msg;
-    pcl::toROSMsg(*pointcloud.get(), cloud_msg);
+        pub_cloud_depth.publish(cloud_msg);
 
-    pub_cloud_depth.publish(cloud_msg);
+        pub_red_bb.publish(redbb);
+    }else{ //only wants to publish for the valorization pointcloud
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(cv::Rect(0, 0, left_image.cols, left_image.rows), depth_map_arg);
+        //converter para sensor_msgs
+        sensor_msgs::PointCloud2 cloud_msg;
+        pcl::toROSMsg(*pointcloud.get(), cloud_msg);
 
-    pub_red_bb.publish(redbb);
+        pub_cloud_val.publish(cloud_msg);
+        
+    }
+    
 }
 
 
@@ -456,7 +465,8 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
 
     // Publish depth map -> pcl RGB
     cv::Mat dm = filtered_depth_map.clone();
-    getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], dm);
+    getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], dm, 0);
+    //getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], depth_map, 1);
 }
 
 
@@ -515,6 +525,7 @@ int main(int argc, char** argv) {
 
     pub_cloud_XYZ = nh.advertise<sensor_msgs::PointCloud2> ("points2", 1);
     pub_cloud_depth = nh.advertise<sensor_msgs::PointCloud2> ("points_depth", 1);
+    pub_cloud_val = nh.advertise<sensor_msgs::PointCloud2> ("points_val", 1);
     pub_red_bb = nh.advertise<pm_assign2::bounding> ("closest_car", 1);
 
 

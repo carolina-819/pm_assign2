@@ -26,8 +26,7 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
 void cbClosest(const pm_assign2::boundingConstPtr& msg)
 {
     cv::Rect bb = cv::Rect(msg->x, msg->y, msg->width, msg->height);
-    cv::rectangle(left_image, bb, cv::Scalar(0, 0, 255), 1, 8, 0);
-
+    
     // Transform centroid to "base_link"
     geometry_msgs::PointStamped centroid;
     centroid.header.frame_id = "vision_frame";
@@ -40,6 +39,14 @@ void cbClosest(const pm_assign2::boundingConstPtr& msg)
     listener->transformPoint("base_link", centroid, transformed_centroid);
 
     float cx=transformed_centroid.point.x, cy=transformed_centroid.point.y, cz=transformed_centroid.point.z;
+
+    if(cx < 10 && (cy < 5 || cy > -5)){
+        cv::rectangle(left_image, bb, cv::Scalar(0, 0, 255), 1, 8, 0);
+    }else{
+        cv::rectangle(left_image, bb, cv::Scalar(0, 255, 255), 1, 8, 0);
+    }
+   
+
 
     cv::putText(left_image, "X:" + std::to_string(cx) + " Y:" + std::to_string(cy) + " Z:" +std::to_string(cz), cv::Point(msg->x, msg->y), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
     cv::imshow("Left image", left_image);
