@@ -303,7 +303,7 @@ int getClosestCar(std::vector<cv::Rect> bbs)
 
         // Filter Outliars Too Far
         cv::Mat filtered_dm;
-        double upper_t = 2*min_avg;
+        double upper_t = 3*min_avg;
         cv::threshold(segmented_dm, filtered_dm, upper_t, 255, cv::THRESH_TOZERO_INV); // Binarize image // 0: Binary, 1: Binary Inverted, 2: Truncate, 3: To Zero, 4: To Zero Inverted
 //        cv::Mat color_dm2;
 //        applyColorMap(filtered_dm, color_dm2, cv::COLORMAP_HOT);
@@ -311,14 +311,16 @@ int getClosestCar(std::vector<cv::Rect> bbs)
 //        cv::waitKey(1);
 
         // Filter Outliars Too Close
-        double lower_t = min_avg/4;
+        double lower_t = min_avg/10;
         cv::threshold(filtered_dm, filtered_dm, lower_t, 255, cv::THRESH_TOZERO); // Binarize image // 0: Binary, 1: Binary Inverted, 2: Truncate, 3: To Zero, 4: To Zero Inverted
-//        cv::Mat color_dm3;
-//        applyColorMap(filtered_dm, color_dm3, cv::COLORMAP_HOT);
-//        cv::imshow("Filtered Depth Map - Up/Low", color_dm3);
-//        cv::waitKey(1);
+        cv::Mat color_dm3;
+        applyColorMap(filtered_dm, color_dm3, cv::COLORMAP_HOT);
+        cv::imshow("Filtered Depth Map - Up/Low", color_dm3);
+        cv::waitKey(1);
 
         filtered_depth_map = filtered_dm.clone();
+
+        ROS_WARN_STREAM("avg="<<min_avg<<" low="<<lower_t<<" upper="<<upper_t<<"\n");
     }
 
     return idx;
@@ -328,9 +330,6 @@ int getClosestCar(std::vector<cv::Rect> bbs)
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr depthMapToPointcloud(cv::Rect roi, cv::Mat dm)
 {
     cv::Mat depth = dm.clone();
-
-//    cv::imshow("Filtered Depth Map - Up/Low", depth);
-//    cv::waitKey(1);
 
     cv::Mat image = left_image.clone();
     float z, y, x;
@@ -406,9 +405,9 @@ pcl::PointXYZ calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointclou
 }
 
 
-void getClosestAndPublish(cv::Rect BB, cv::Mat depth_map_arg)
+void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
 {
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB, depth_map_arg);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB_large, depth_map_arg);
     pcl::PointXYZ c = calculateCentroid(pointcloud);
 
     //send message with red bounding box and centroid position
@@ -457,7 +456,7 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
 
     // Publish depth map -> pcl RGB
     cv::Mat dm = filtered_depth_map.clone();
-    getClosestAndPublish(car_ROIs[idx], dm); // car_ROIs_large[idx]
+    getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], dm);
 }
 
 
