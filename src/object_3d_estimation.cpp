@@ -566,13 +566,6 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
     }else{
         ROS_WARN_STREAM("no car detected!");
     }
-
-        // Publish depth map -> pcl RGB
-        cv::Mat dm = filtered_depth_map.clone();
-        getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], dm);
-        // PublishPCL_val();
-    }
-    else ROS_WARN_STREAM("no car detected!");
 }
 
 
