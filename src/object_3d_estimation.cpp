@@ -402,6 +402,40 @@ pcl::PointXYZ calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointclou
 }
 
 
+void publishPose(pcl::PointXYZ c)
+{
+    double x=c._PointXYZ::x, y=c._PointXYZ::y, z=c._PointXYZ::z;
+
+    geometry_msgs::Pose centroid;
+
+    double hipo_xy = sqrt(pow(x,2)+pow(y,2));
+    double hipo_z = sqrt(pow(z,2)+pow(hipo_xy,2));
+
+    // Calculate Roll (X)
+    double gamma = acos (z/hipo_z) * 180.0 / PI;
+//    double Rroll[3][3] = {{1, 0, 0}, {0, cos(gamma), -sin(gamma)}, {0, sin(gamma), cos(gamma)}};
+
+    // Calculate Pitch (Y)
+    double beta = atan2 (y,x) * 180.0 / PI;
+//    double Rpitch[3][3] = {{cos(beta), 0, sin(beta)}, {0, 1, 0}, {-sin(beta), 0, cos(beta)}};
+
+
+    centroid.position.x = x;
+    centroid.position.y = y;
+    centroid.position.z = z;
+
+    tf2::Quaternion q;
+    q.setRPY(gamma, beta, 0);
+
+    centroid.orientation.x = q.getX();
+    centroid.orientation.y = q.getY();
+    centroid.orientation.z = 0;
+    centroid.orientation.w = 0;
+
+    pub_Pose.publish(centroid);
+}
+
+
 void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
 {
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB_large, depth_map_arg);
@@ -423,7 +457,19 @@ void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
         sensor_msgs::PointCloud2 cloud_msg;
         pcl::toROSMsg(*pointcloud_.get(), cloud_msg);
 
-        pub_cloud_depth.publish(cloud_msg);
+    publishPose(c);
+
+    //send message with red bounding box and centroid position
+    pm_assign2::bounding redbb;
+    redbb.header.stamp = ros::Time::now();
+    redbb.xp = c.x;
+    redbb.yp = c.y;
+    redbb.zp = c.z;
+    redbb.x = BB.x;
+    redbb.y = BB.y;
+    redbb.width = BB.width;
+    redbb.height = BB.height;
+//    ROS_WARN_STREAM("mais pequeno " << index);
 
         pub_red_bb.publish(redbb);
    
@@ -588,6 +634,8 @@ int main(int argc, char** argv) {
     pub_cloud_depth = nh.advertise<sensor_msgs::PointCloud2> ("points_depth", 1);
     pub_cloud_val = nh.advertise<sensor_msgs::PointCloud2> ("points_val", 1);
     pub_red_bb = nh.advertise<pm_assign2::bounding> ("closest_car", 1);
+
+    pub_Pose = nh.advertise<geometry_msgs::Pose> ("pose_rp", 1);
 
 
     while(ros::ok())
