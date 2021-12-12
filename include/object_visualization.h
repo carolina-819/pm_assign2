@@ -20,6 +20,6 @@
 #include <darknet_ros_msgs/BoundingBoxes.h>
 
 
-cv::Mat left_image;
+cv::Mat left_image, depth_mat_cut;
 
 tf::TransformListener *listener;

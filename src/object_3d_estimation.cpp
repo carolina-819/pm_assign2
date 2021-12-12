@@ -73,9 +73,8 @@ void cbNewImage(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::PointC
 std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car_BBs)
 {
 //    cv::Mat img_bb = left_image.clone();
-
     int n_cars = car_BBs.bounding_boxes.size();
-
+    ROS_WARN_STREAM("FILTER");
     std::vector<cv::Rect> car_ROIs;
     car_ROIs.reserve(n_cars);
    
@@ -153,8 +152,8 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
 
 std::vector<cv::Rect> enlargeBBs(std::vector<cv::Rect> car_ROIs)
 {
-    int n_cars = car_ROIs.size();
 
+    int n_cars = car_ROIs.size();
     std::vector<cv::Rect> car_ROIs_large;
     car_ROIs_large.reserve(n_cars);
 
@@ -403,9 +402,8 @@ pcl::PointXYZ calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointclou
 }
 
 
-void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg, int val)
+void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
 {
-    if(val == 0){
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB_large, depth_map_arg);
         pcl::PointXYZ c = calculateCentroid(pointcloud);
 
@@ -420,26 +418,79 @@ void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg,
         redbb.width = BB.width;
         redbb.height = BB.height;
     //    ROS_WARN_STREAM("mais pequeno " << index);
-
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud_ = depthMapToPointcloud(BB, depth_map);
         //converter para sensor_msgs
         sensor_msgs::PointCloud2 cloud_msg;
-        pcl::toROSMsg(*pointcloud.get(), cloud_msg);
+        pcl::toROSMsg(*pointcloud_.get(), cloud_msg);
 
         pub_cloud_depth.publish(cloud_msg);
 
         pub_red_bb.publish(redbb);
-    }else{ //only wants to publish for the valorization pointcloud
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(cv::Rect(0, 0, left_image.cols, left_image.rows), depth_map_arg);
-        //converter para sensor_msgs
-        sensor_msgs::PointCloud2 cloud_msg;
-        pcl::toROSMsg(*pointcloud.get(), cloud_msg);
-
-        pub_cloud_val.publish(cloud_msg);
-        
-    }
+   
     
 }
 
+void PublishPCL_val(){
+    cv::Mat depth = depth_map.clone();
+
+    cv::Mat image = left_image.clone();
+    ROS_WARN_STREAM("dm: " << depth.rows << " " << depth.cols << "img: " << image.rows << " " << image.cols);
+   
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud;
+
+    float z, y, x;
+
+    depth.convertTo(depth, CV_32F);
+
+    if (!depth.data)
+    {
+        std::cerr << "No depth data!!!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    /*if(image.rows != depth.rows || image.cols != depth.cols){
+        std::cerr << "Different sizes" << std::endl;
+        exit(EXIT_FAILURE);
+    }*/
+
+    pointcloud->header.frame_id = "vision_frame";
+    pointcloud->width = image.cols; //Dimensions must be initialized to use 2-D indexing
+    pointcloud->height = image.rows;
+    ROS_WARN_STREAM("for " << pointcloud->width << "altura " << pointcloud->height);
+    for (int v = 0 ; v < image.rows; v ++)
+    {
+        ROS_WARN_STREAM("for v");
+        
+        for (int u = 0; u < image.cols; u ++)
+        {
+            ROS_WARN_STREAM("for u");
+                    //calculates only for points inside roi
+                float Z = depth.at<float>(v, u);
+
+                pcl::PointXYZRGB p;
+                p.z = Z;
+                p.x = ((u - left_camera.cx) * Z / left_camera.fx);
+                p.y = ((v - left_camera.cy) * Z / left_camera.fy);
+                p.r = image.at<cv::Vec3b>(v, u)[2];
+                p.g = image.at<cv::Vec3b>(v, u)[1];
+                p.b = image.at<cv::Vec3b>(v, u)[0];
+
+
+                pointcloud->points.push_back(p);
+                
+                
+            
+        }
+    }
+
+    ROS_WARN_STREAM("tamanho pc: " << pointcloud->points.size());
+    //converter para sensor_msgs
+    sensor_msgs::PointCloud2 cloud_msg;
+    pcl::toROSMsg(*pointcloud.get(), cloud_msg);
+
+    pub_cloud_val.publish(cloud_msg);
+}
 
 void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
 {
@@ -456,17 +507,27 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
 
     // Filter Irrelevant Car Bounding Boxes
     std::vector<cv::Rect> car_ROIs = FilterBoundingBoxesRGB(car_BBs);
+    
 
+    ROS_WARN_STREAM("ENLARGING ");
     // Enlarge BBs for Depth Map Processing
-    std::vector<cv::Rect> car_ROIs_large = enlargeBBs(car_ROIs);
+    std::vector<cv::Rect> car_ROIs_large;
+    if(car_ROIs.size() > 0){
+        car_ROIs_large = enlargeBBs(car_ROIs);
 
+     ROS_WARN_STREAM("closest car");
     // Get Closest Car From Depth Map
     int idx = getClosestCar(car_ROIs_large);
 
+   
     // Publish depth map -> pcl RGB
     cv::Mat dm = filtered_depth_map.clone();
-    getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], dm, 0);
-    //getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], depth_map, 1);
+    getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], dm);
+    PublishPCL_val();
+    }else{
+        ROS_WARN_STREAM("no car detected!");
+    }
+
 }
 
 
