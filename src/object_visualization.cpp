@@ -121,6 +121,7 @@ void cbClosest(const pm_assign2::boundingConstPtr& msg)
     cz=transformed_centroid.point.z;
 }
 
+
 void cbDepth(const sensor_msgs::PointCloud2ConstPtr& pc_msg)
 {
   /*  pcl::PCLPointCloud2 pcl_pc2;
