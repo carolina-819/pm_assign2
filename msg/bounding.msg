@@ -6,5 +6,5 @@ float32 height
 float32 xp
 float32 yp
 float32 zp
-#double car_w
-#double car_h
+float32 car_w
+float32 car_h

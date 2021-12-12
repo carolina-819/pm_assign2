@@ -74,12 +74,14 @@ void cbClosest(const pm_assign2::boundingConstPtr& msg)
     centroid.point.x = msg->xp;
     centroid.point.y = msg->yp;
     centroid.point.z = msg->zp;
+    float w = msg->car_w;
+    float h = msg->car_h;
+
 
     geometry_msgs::PointStamped transformed_centroid;
     listener->transformPoint("base_link", centroid, transformed_centroid);
 
     float cx=transformed_centroid.point.x, cy=transformed_centroid.point.y, cz=transformed_centroid.point.z;
-
 
     // Warning Sign
     if(cx < 10 && cy < 5 && cy > -5)
@@ -88,6 +90,8 @@ void cbClosest(const pm_assign2::boundingConstPtr& msg)
         cv::putText(left_image, "X:" + std::to_string(cx), cv::Point(msg->x, msg->y-40), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
         cv::putText(left_image, "Y:" + std::to_string(cy), cv::Point(msg->x, msg->y-20), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
         cv::putText(left_image, "Z:" +std::to_string(cz), cv::Point(msg->x, msg->y), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
+        cv::putText(left_image, "width: " +std::to_string(w) + "height: " +std::to_string(h), cv::Point(msg->x, msg->y-60), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,0,255),1, 2,false);
+    
     }
 
     else
@@ -96,8 +100,10 @@ void cbClosest(const pm_assign2::boundingConstPtr& msg)
         cv::putText(left_image, "X:" + std::to_string(cx), cv::Point(msg->x, msg->y-40), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
         cv::putText(left_image, "Y:" + std::to_string(cy), cv::Point(msg->x, msg->y-20), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
         cv::putText(left_image, "Z:" +std::to_string(cz), cv::Point(msg->x, msg->y), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
+        cv::putText(left_image, "width: " +std::to_string(w) + "height: " +std::to_string(h), cv::Point(msg->x, msg->y-60), cv::FONT_HERSHEY_DUPLEX,0.7,cv::Scalar(0,255,0),1, 2,false);
+    
     }
-
+          
     cv::imshow("Left image", left_image);
     cv::waitKey(1);
 }

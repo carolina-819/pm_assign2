@@ -516,6 +516,8 @@ void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
     redbb.y = BB.y;
     redbb.width = BB.width;
     redbb.height = BB.height;
+    redbb.car_w = dimensions[0];
+    redbb.car_h = dimensions[1];
 //    ROS_WARN_STREAM("mais pequeno " << index);
 
     pub_red_bb.publish(redbb);
