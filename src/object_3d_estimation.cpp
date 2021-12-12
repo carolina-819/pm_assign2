@@ -169,13 +169,13 @@ std::vector<cv::Rect> enlargeBBs(std::vector<cv::Rect> car_ROIs)
         // Up -> 5% bigger
         // Left -> 10% bigger
         // Down -> 10% bigger
-        // Right -> 33% bigger
+        // Right -> 25% bigger
         if(x-x/10 >= 0)
         {
             x_new = x - x/10;
             w_new = w + x/10;
 
-            if(x_new + w_new+w/3 < cam_info.width) w_new += w/3;
+            if(x_new + w_new+w/4 < cam_info.width) w_new += w/4;
             else w_new = cam_info.width - x_new;
         }
         else
