@@ -350,6 +350,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr depthMapToPointcloud(cv::Rect roi, cv::Ma
     pointcloud->header.frame_id = "vision_frame";
     pointcloud->width = roi.width; //Dimensions must be initialized to use 2-D indexing
     pointcloud->height = roi.height;
+    ROS_WARN_STREAM("roi width " << roi.width);
 
     for (int v = roi.y; v < (roi.y + roi.height); v ++)
     {
@@ -447,6 +448,7 @@ void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
         //converter para sensor_msgs
         sensor_msgs::PointCloud2 cloud_msg;
         pcl::toROSMsg(*pointcloud_.get(), cloud_msg);
+        pub_cloud_depth.publish(cloud_msg);
 
     publishPose(c);
 
@@ -462,19 +464,17 @@ void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
     redbb.height = BB.height;
 //    ROS_WARN_STREAM("mais pequeno " << index);
 
-        pub_red_bb.publish(redbb);
+    pub_red_bb.publish(redbb);
    
     
 }
 
 void PublishPCL_val(){
     cv::Mat depth = depth_map.clone();
-
     cv::Mat image = left_image.clone();
     ROS_WARN_STREAM("dm: " << depth.rows << " " << depth.cols << "img: " << image.rows << " " << image.cols);
    
-
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 
     float z, y, x;
 
@@ -485,23 +485,23 @@ void PublishPCL_val(){
         std::cerr << "No depth data!!!" << std::endl;
         exit(EXIT_FAILURE);
     }
-
+    
+        
     /*if(image.rows != depth.rows || image.cols != depth.cols){
         std::cerr << "Different sizes" << std::endl;
         exit(EXIT_FAILURE);
     }*/
 
     pointcloud->header.frame_id = "vision_frame";
+    
     pointcloud->width = image.cols; //Dimensions must be initialized to use 2-D indexing
     pointcloud->height = image.rows;
-    ROS_WARN_STREAM("for " << pointcloud->width << "altura " << pointcloud->height);
+   
     for (int v = 0 ; v < image.rows; v ++)
     {
-        ROS_WARN_STREAM("for v");
         
         for (int u = 0; u < image.cols; u ++)
         {
-            ROS_WARN_STREAM("for u");
                     //calculates only for points inside roi
                 float Z = depth.at<float>(v, u);
 
@@ -560,7 +560,7 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
     // Publish depth map -> pcl RGB
     cv::Mat dm = filtered_depth_map.clone();
     getClosestAndPublish(car_ROIs[idx], car_ROIs_large[idx], dm);
-   // PublishPCL_val();
+    PublishPCL_val();
     }else{
         ROS_WARN_STREAM("no car detected!");
     }
