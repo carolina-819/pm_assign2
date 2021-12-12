@@ -135,16 +135,16 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
         }
     }
 
-//    // Show chosen BBs
-//    cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
-//    cv::Mat segmented = cv::Mat::zeros(left_image.size(), left_image.type());
-//    for(int i=0; i<car_ROIs.size(); i++)
-//    {
-//        cv::rectangle(mask, car_ROIs[i], cv::Scalar(255, 255, 255),-1, 8, 0);
-//        left_image.copyTo(segmented, mask);
-//    }
-//    cv::imshow("segmented", segmented);
-//    cv::waitKey(1);
+    // Show chosen BBs
+    cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
+    cv::Mat segmented = cv::Mat::zeros(left_image.size(), left_image.type());
+    for(int i=0; i<car_ROIs.size(); i++)
+    {
+        cv::rectangle(mask, car_ROIs[i], cv::Scalar(255, 255, 255),-1, 8, 0);
+        left_image.copyTo(segmented, mask);
+    }
+    cv::imshow("segmented", segmented);
+    cv::waitKey(1);
 
     return car_ROIs;
 }
@@ -166,12 +166,14 @@ std::vector<cv::Rect> enlargeBBs(std::vector<cv::Rect> car_ROIs)
 
         int x_new, y_new, w_new, h_new;
 
-        // Left, Up. Down -> 20% bigger
+        // Up -> 5% bigger
+        // Left -> 10% bigger
+        // Down -> 10% bigger
         // Right -> 33% bigger
-        if(x-x/5 >= 0)
+        if(x-x/10 >= 0)
         {
-            x_new = x- x/5;
-            w_new = w + x/5;
+            x_new = x - x/10;
+            w_new = w + x/10;
 
             if(x_new + w_new+w/3 < cam_info.width) w_new += w/3;
             else w_new = cam_info.width - x_new;
@@ -182,12 +184,12 @@ std::vector<cv::Rect> enlargeBBs(std::vector<cv::Rect> car_ROIs)
             w_new = w;
         }
 
-        if(y-y/5 >= 0)
+        if(y - y/20 >= 0)
         {
-            y_new = y - y/5;
-            h_new = h + y/5;
+            y_new = y - y/20;
+            h_new = h + y/20;
 
-            if(y_new + h_new+h/5 < cam_info.height) h_new += h/5;
+            if(y_new + h_new+h/10 < cam_info.height) h_new += h/10;
             else h_new = cam_info.height - y_new;
         }
         else
@@ -282,13 +284,13 @@ int getClosestCar(std::vector<cv::Rect> bbs)
 
 //        ROS_WARN_STREAM("min_avg="<<min_avg);
 
-//        // Show chosen BBs
-//        cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
-//        cv::Mat segmented = cv::Mat::zeros(left_image.size(), left_image.type());
-//        cv::rectangle(mask, bbs[idx], cv::Scalar(255, 255, 255),-1, 8, 0);
-//        left_image.copyTo(segmented, mask);
-//        cv::imshow("After mean based filtering", segmented);
-//        cv::waitKey(1);
+        // Show chosen BBs
+        cv::Mat mask = cv::Mat::zeros(left_image.size(), left_image.type());
+        cv::Mat segmented = cv::Mat::zeros(left_image.size(), left_image.type());
+        cv::rectangle(mask, bbs[idx], cv::Scalar(255, 255, 255),-1, 8, 0);
+        left_image.copyTo(segmented, mask);
+        cv::imshow("After mean based filtering", segmented);
+        cv::waitKey(1);
 
         // Segment Depth Map
         cv::Mat mask_dm = cv::Mat::zeros(depth_map.size(), depth_map.type());

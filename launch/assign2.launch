@@ -4,14 +4,17 @@
 
 <!-- Bags name -->
 <arg name="path_bag" default="/home/percmap/catkin_ws/Bag/" />
+
 <arg name="file_bag" default="coastalloop_track" />
+<!--<arg name="file_bag" default="coastalloop_tracking2" />-->
+<!--<arg name="file_bag" default="coastalloop_carbreak" />-->
 
 <node ns="/stereo/left" name="image_proc_left" type="image_proc" pkg="image_proc"/>
 <node ns="/stereo/right" name="image_proc_right" type="image_proc" pkg="image_proc"/>
 
 <!-- Change the rate if needed:  -->
 <param name="use_sim_time" value="true"/>
-<node pkg="rosbag" type="play" name="player" args="--clock -r 0.2 -l $(arg path_bag)$(arg file_bag).bag"/>
+<node pkg="rosbag" type="play" name="player" args="--clock -r 0.3 -l $(arg path_bag)$(arg file_bag).bag"/>
 
 <!-- Just to uncompress images-->
 <node name="republish_left"  type="republish" pkg="image_transport" args="compressed in:=/stereo/left/image_raw raw out:=/stereo/left/image_raw" />
@@ -26,7 +29,7 @@
 <rosparam param="frame_id_pcl">"velodyne"</rosparam>
 </node>
 
-<node name="object_visualization" type="object_visualization" pkg="pm_assign2"/>
+<!--<node name="object_visualization" type="object_visualization" pkg="pm_assign2"/>-->
 
 <!-- Launch detector -->
 <include if="$(arg run_detector)" ns="dark2" file="$(find darknet_ros)/launch/darknet_ros.launch" >
