@@ -50,12 +50,15 @@ void cbBoundingBoxes(const darknet_ros_msgs::BoundingBoxesConstPtr& msg_BBs)
 {
     for (int i = 0; i < msg_BBs->bounding_boxes.size(); i++)
     {
-        x = msg_BBs->bounding_boxes[i].xmin;
-        y = msg_BBs->bounding_boxes[i].ymin;
-        w = msg_BBs->bounding_boxes[i].xmax - x;
-        h = msg_BBs->bounding_boxes[i].ymax - y;
+        if(msg_BBs->bounding_boxes[i].Class == "car"){
+            x = msg_BBs->bounding_boxes[i].xmin;
+            y = msg_BBs->bounding_boxes[i].ymin;
+            w = msg_BBs->bounding_boxes[i].xmax - x;
+            h = msg_BBs->bounding_boxes[i].ymax - y;
 
-        cv::rectangle(left_image, cv::Rect(x, y, w, h), cv::Scalar(0, 255, 0), 1, 8, 0);
+            cv::rectangle(left_image, cv::Rect(x, y, w, h), cv::Scalar(0, 255, 0), 1, 8, 0);
+        }
+        
     }
 }
 
