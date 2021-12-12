@@ -100,7 +100,8 @@ std::vector<cv::Rect> FilterBoundingBoxesRGB(darknet_ros_msgs::BoundingBoxes car
     double middle = (max + min)/ 2;
 //    ROS_WARN_STREAM("Middle=" << middle);
 
-    double mid_middle = (middle + min) / 2; // To filter very small BBs
+    double mid_middle = (middle + min) / 2; // To filter very small BBs // Filters 1/2 of the gap between middle and min
+//    mid_middle = (mid_middle + min) / 2 * 1.25;
 
 
     // Get Bounding Boxes
