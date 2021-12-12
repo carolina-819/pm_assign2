@@ -392,7 +392,7 @@ pcl::PointXYZ calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointclou
         aux.y = pointcloud->points[i].y;
         aux.z = pointcloud->points[i].z;
 
-        if(aux.z > 0)centroid.add(aux);
+        if(aux.z > 0) centroid.add(aux);
     }
 
     pcl::PointXYZ c;
@@ -405,7 +405,9 @@ pcl::PointXYZ calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointclou
 
 void getClosestAndPublish(cv::Rect BB, cv::Rect BB_large, cv::Mat depth_map_arg)
 {
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB_large, depth_map_arg);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB, depth_map_arg); // Use Normal
+//    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud = depthMapToPointcloud(BB_large, depth_map_arg); // Use Large
+
     pcl::PointXYZ c = calculateCentroid(pointcloud);
 
     //send message with red bounding box and centroid position
