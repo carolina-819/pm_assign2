@@ -416,6 +416,8 @@ std::vector<double> getWidthandHeight(pcl::PointCloud<pcl::PointXYZRGB>::Ptr poi
 
     ROS_WARN_STREAM("pcl size = "<<pointcloud->points.size());
 
+
+
     // Height
     for(int i=0; i<pointcloud->points.size(); i++)
     {
